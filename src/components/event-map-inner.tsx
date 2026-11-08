@@ -8,7 +8,7 @@ import type { ShapedEvent } from "@/server/eonet/types";
 import { categoryColors } from "@/lib/theme";
 import { eventsToGeoJSON } from "./map-utils";
 
-const MAP_STYLE = process.env.NEXT_PUBLIC_MAP_STYLE || "https://demotiles.maplibre.org/style.json";
+const MAP_STYLE = process.env.NEXT_PUBLIC_MAP_STYLE || "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 
 interface EventMapInnerProps {
   events: ShapedEvent[];
