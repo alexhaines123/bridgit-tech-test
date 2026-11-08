@@ -27,3 +27,18 @@ export function getCategoriesFromEvents(events: ShapedEvent[]): string[] {
   }
   return result;
 }
+
+/**
+ * Builds a mapping from Category ID to Category title from Events.
+ */
+export function getCategoryTitlesFromEvents(
+  events: ShapedEvent[],
+): Record<string, string> {
+  const titles: Record<string, string> = {};
+  for (const e of events) {
+    if (!titles[e.categoryId]) {
+      titles[e.categoryId] = e.categoryTitle;
+    }
+  }
+  return titles;
+}
