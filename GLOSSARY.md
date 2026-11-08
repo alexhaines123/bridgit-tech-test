@@ -37,5 +37,5 @@ An Event the Briefing singles out and explains in a sentence. It must refer to a
 _Avoid_: Highlight, top event, featured event
 
 **Planetary Stress Index**:
-An illustrative 0-100 score computed by a documented formula from Event volume, new-Event momentum and Category severity weights. It is not a forecast of any real-world catastrophe.
+An illustrative 0-100 score combining ratings of a few factors (Event volume, new-Event momentum, Category severity) with a documented formula. It is not a forecast of any real-world catastrophe.
 _Avoid_: Doomsday score, risk score, prediction
