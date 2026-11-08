@@ -3,6 +3,19 @@ import { appRouter } from "./root";
 import { eonetClient } from "@/server/eonet/client";
 import { EonetUpstreamError } from "@/server/eonet/errors";
 
+// Mock the cache module so unit tests of the router don't need Redis.
+// The cache's own integration tests cover the Redis behavior.
+vi.mock("@/server/cache/redis-cache", () => {
+  class MockRedisEventsCache {
+    getOrFetch = vi.fn(async (_windowDays: number, fetcher: () => Promise<unknown>) => {
+      const data = await fetcher();
+      return { data, stale: false };
+    });
+    close = vi.fn();
+  }
+  return { RedisEventsCache: MockRedisEventsCache };
+});
+
 describe("appRouter.health", () => {
   it("reports the app as ok", async () => {
     const caller = appRouter.createCaller({});
@@ -28,7 +41,7 @@ describe("appRouter.events", () => {
   it("accepts valid Window values (7, 30, 90)", async () => {
     const mockResponse = {
       title: "EONET Events",
-      description: "Natural events from EONET.",
+      description: "Natural events from NASA.",
       link: "https://eonet.gsfc.nasa.gov/api/v3/events",
       events: [],
     };
@@ -45,7 +58,7 @@ describe("appRouter.events", () => {
   it("returns shaped events with metadata", async () => {
     const mockResponse = {
       title: "EONET Events",
-      description: "Natural events from EONET.",
+      description: "Natural events from NASA.",
       link: "https://eonet.gsfc.nasa.gov/api/v3/events",
       events: [
         {
@@ -78,6 +91,7 @@ describe("appRouter.events", () => {
     expect(result.events[0].id).toBe("EONET_TEST");
     expect(result.rawSizeBytes).toBeGreaterThan(0);
     expect(result.shapedSizeBytes).toBeGreaterThan(0);
+    expect(result.stale).toBe(false);
   });
 
   it("surfaces upstream errors as user-friendly messages", async () => {
