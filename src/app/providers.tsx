@@ -6,7 +6,7 @@ import { AppRouterCacheProvider } from "@mui/material-nextjs/v16-appRouter";
 import { CssBaseline, ThemeProvider } from "@mui/material";
 import { createTRPCApiClient } from "@/lib/trpc/client";
 import { trpc } from "@/lib/trpc/react";
-import { theme } from "@/lib/theme";
+import { appTheme } from "@/lib/theme";
 
 /** Composes every app-wide provider: tRPC, TanStack Query, MUI dark theme. */
 export function Providers({ children }: { children: ReactNode }) {
@@ -17,7 +17,7 @@ export function Providers({ children }: { children: ReactNode }) {
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
         <AppRouterCacheProvider>
-          <ThemeProvider theme={theme}>
+          <ThemeProvider theme={appTheme}>
             <CssBaseline />
             {children}
           </ThemeProvider>
