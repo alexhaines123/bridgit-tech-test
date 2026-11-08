@@ -1,0 +1,21 @@
+# secrets: only .env.example is tracked
+.env
+.env.*
+!.env.example
+
+# dependencies
+node_modules/
+
+# build output
+.next/
+out/
+dist/
+coverage/
+
+# test output
+playwright-report/
+test-results/
+
+# misc
+.DS_Store
+*.log
