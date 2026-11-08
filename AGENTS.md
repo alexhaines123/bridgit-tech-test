@@ -1,9 +1,9 @@
-## Agent skills
+# Repository guidance
 
-### Issue tracker
+## GitHub issues
 
-Issues are tracked in GitHub Issues for this repo, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+Use the `gh` CLI for issue and spec tracking. Follow `docs/agents/issue-tracker.md` for repo-specific commands and conventions.
 
-### Domain docs
+## Domain docs
 
-Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+This is a single-context repo: domain docs live in root `GLOSSARY.md` and `docs/adr/`. Follow `docs/agents/domain.md` when exploring domain terms or recording decisions; create these docs lazily.
