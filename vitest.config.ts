@@ -5,6 +5,7 @@ export default defineConfig({
   test: {
     environment: "node",
     exclude: [...configDefaults.exclude, ".next/**"],
+    setupFiles: ["./test/setup.ts"],
   },
   resolve: {
     alias: {
