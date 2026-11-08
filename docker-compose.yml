@@ -1,0 +1,15 @@
+# Local Redis for Planet Watch. Redis is a hard dependency (ADR 0004).
+# Start with: docker compose up -d   (matches REDIS_URL=redis://localhost:6379)
+name: planet-watch
+
+services:
+  redis:
+    image: redis:8.10.3-alpine
+    container_name: planet-watch-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
