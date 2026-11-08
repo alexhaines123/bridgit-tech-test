@@ -62,13 +62,14 @@ export default function EventMapInner({
       <Map
         ref={mapRef}
         initialViewState={{
-          longitude: 0,
-          latitude: 20,
-          zoom: 1.5,
+          longitude: 30,
+          latitude: 15,
+          zoom: 1,
         }}
         style={{ width: "100%", height: "100%" }}
         mapStyle={MAP_STYLE}
         onClick={handleMapClick}
+        workerUrl="/maplibre-gl-worker.mjs"
       >
         <NavigationControl position="top-right" />
 
