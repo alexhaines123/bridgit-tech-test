@@ -8,6 +8,10 @@ Use the `gh` CLI for issue and spec tracking. Follow `docs/agents/issue-tracker.
 
 This is a single-context repo: domain docs live in root `GLOSSARY.md` and `docs/adr/`. Follow `docs/agents/domain.md` when exploring domain terms or recording decisions; create these docs lazily.
 
+## Pull requests
+
+Structure PRs with multiple logical commits following the code flow (data → API → UI), not one large commit. See `docs/agents/pr-conventions.md` for the commit ordering pattern and examples.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 ## This is NOT the Next.js you know
