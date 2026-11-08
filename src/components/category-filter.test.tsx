@@ -3,7 +3,6 @@ import { describe, expect, it, vi, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CategoryFilter } from "./category-filter";
-import { categoryColors } from "@/lib/theme";
 import { ThemeProvider } from "@mui/material";
 import { appTheme } from "@/lib/theme";
 

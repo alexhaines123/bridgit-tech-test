@@ -1,14 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { filterEventsByCategories, getCategoriesFromEvents } from "./filters";
+import {
+  filterEventsByCategories,
+  getCategoriesFromEvents,
+  getCategoryTitlesFromEvents,
+} from "./filters";
 import type { ShapedEvent } from "@/server/eonet/types";
 
-const makeEvent = (id: string, categoryId: string): ShapedEvent => ({
+const makeEvent = (id: string, categoryId: string, categoryTitle?: string): ShapedEvent => ({
   id,
   title: `Event ${id}`,
   description: null,
   link: "https://example.com",
   categoryId,
-  categoryTitle: categoryId,
+  categoryTitle: categoryTitle || categoryId,
   closed: false,
   latest: {
     coordinates: [0, 0],
@@ -56,5 +60,23 @@ describe("getCategoriesFromEvents", () => {
 
   it("returns empty array when no events", () => {
     expect(getCategoriesFromEvents([])).toEqual([]);
+  });
+});
+
+describe("getCategoryTitlesFromEvents", () => {
+  it("builds a mapping from category ID to title", () => {
+    const eventsWithTitles = [
+      makeEvent("1", "wildfires", "Wildfires"),
+      makeEvent("2", "earthquakes", "Earthquakes"),
+    ];
+    const titles = getCategoryTitlesFromEvents(eventsWithTitles);
+    expect(titles).toEqual({
+      wildfires: "Wildfires",
+      earthquakes: "Earthquakes",
+    });
+  });
+
+  it("returns empty object when no events", () => {
+    expect(getCategoryTitlesFromEvents([])).toEqual({});
   });
 });

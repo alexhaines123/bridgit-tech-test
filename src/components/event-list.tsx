@@ -13,13 +13,16 @@ import type { ShapedEvent } from "@/server/eonet/types";
 
 interface EventListProps {
   events: ShapedEvent[];
+  selectedEventId?: string | null;
+  onSelectEvent?: (id: string | null) => void;
 }
 
 /**
  * Displays a list of Events with Category, dates and Magnitude with its own unit.
  * Magnitudes are never summed or compared across Categories.
+ * Supports bidirectional selection with the map.
  */
-export function EventList({ events }: EventListProps) {
+export function EventList({ events, selectedEventId, onSelectEvent }: EventListProps) {
   if (events.length === 0) {
     return (
       <Card>
@@ -40,13 +43,26 @@ export function EventList({ events }: EventListProps) {
   return (
     <Stack spacing={2}>
       {events.map((event) => (
-        <EventCard key={event.id} event={event} />
+        <EventCard
+          key={event.id}
+          event={event}
+          isSelected={selectedEventId === event.id}
+          onSelect={() => onSelectEvent?.(event.id)}
+        />
       ))}
     </Stack>
   );
 }
 
-function EventCard({ event }: { event: ShapedEvent }) {
+function EventCard({
+  event,
+  isSelected,
+  onSelect,
+}: {
+  event: ShapedEvent;
+  isSelected: boolean;
+  onSelect: () => void;
+}) {
   const date = new Date(event.latest.date).toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
@@ -54,7 +70,29 @@ function EventCard({ event }: { event: ShapedEvent }) {
   });
 
   return (
-    <Card>
+    <Card
+      onClick={onSelect}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
+      tabIndex={0}
+      role="button"
+      aria-pressed={isSelected}
+      sx={{
+        cursor: "pointer",
+        borderColor: isSelected ? "primary.main" : undefined,
+        borderWidth: isSelected ? 2 : 1,
+        transition: "border-color 0.2s",
+        "&:focus": {
+          outline: "2px solid",
+          outlineColor: "primary.main",
+          outlineOffset: "2px",
+        },
+      }}
+    >
       <CardContent>
         <Stack spacing={1.5}>
           <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -106,6 +144,7 @@ function EventCard({ event }: { event: ShapedEvent }) {
             rel="noopener noreferrer"
             size="small"
             variant="text"
+            onClick={(e) => e.stopPropagation()}
           >
             View details →
           </Button>
