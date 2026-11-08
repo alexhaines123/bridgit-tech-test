@@ -10,7 +10,7 @@ This is a single-context repo: domain docs live in root `GLOSSARY.md` and `docs/
 
 ## Pull requests
 
-Structure PRs with multiple logical commits following the code flow (data → API → UI), not one large commit. See `docs/agents/pr-conventions.md` for the commit ordering pattern and examples.
+Structure PRs with multiple logical commits following the code flow (data → API → UI), not one large commit. Read `docs/agents/pr-conventions.md` for commit ordering, PR description language rules (ASD-STE100 + ubiquitous language from `GLOSSARY.md`), and examples.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
