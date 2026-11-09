@@ -5,9 +5,9 @@ import {
   Stack,
   Typography,
   Alert,
-  CircularProgress,
   Button,
   Box,
+  Skeleton,
 } from "@mui/material";
 import { trpc } from "@/lib/trpc/react";
 import { WindowSelector } from "@/components/window-selector";
@@ -15,6 +15,7 @@ import { RecentEventsCompact } from "@/components/recent-events-compact";
 import { CategoryFilter } from "@/components/category-filter";
 import { MeasurementChart } from "@/components/measurement-chart";
 import { BriefingCard } from "@/components/briefing-card";
+import { DashboardSkeleton } from "@/components/dashboard-skeleton";
 import dynamic from "next/dynamic";
 import { DEFAULT_WINDOW_DAYS, type WindowDays } from "@/server/eonet/types";
 import {
@@ -27,17 +28,13 @@ import type { MeasurementSummary } from "@/server/measurements/types";
 // Dynamic import for the map to avoid SSR issues with WebGL
 const EventMap = dynamic(() => import("@/components/event-map"), {
   loading: () => (
-    <Stack
-      sx={{
-        justifyContent: "center",
-        alignItems: "center",
-        height: 400,
-        bgcolor: "background.paper",
-        borderRadius: 1,
-      }}
-    >
-      <CircularProgress />
-    </Stack>
+    <Skeleton
+      variant="rectangular"
+      width="100%"
+      height="100%"
+      animation="wave"
+      sx={{ borderRadius: 1 }}
+    />
   ),
   ssr: false,
 });
@@ -94,11 +91,7 @@ export default function HomePage() {
         <WindowSelector value={windowDays} onChange={setWindowDays} />
       </Stack>
 
-      {events.isPending && (
-        <Stack sx={{ justifyContent: "center", py: 8 }}>
-          <CircularProgress />
-        </Stack>
-      )}
+      {events.isPending && <DashboardSkeleton />}
 
       {events.isError && (
         <Alert
