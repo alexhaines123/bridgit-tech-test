@@ -2,6 +2,7 @@
 
 import { useTheme } from "@mui/material/styles";
 import {
+  Box,
   Card,
   CardContent,
   Typography,
@@ -11,7 +12,6 @@ import {
   TableCell,
   TableHead,
   TableRow,
-  Box,
 } from "@mui/material";
 import {
   BarChart,
@@ -141,9 +141,8 @@ function ChartRenderer({ measurement }: { measurement: Measurement }) {
       const data = measurement.data;
       if (!data.eventId || data.magnitudeValue === null) {
         return (
-          <Box
+          <Stack
             sx={{
-              display: "flex",
               alignItems: "center",
               justifyContent: "center",
               height: "100%",
@@ -154,7 +153,7 @@ function ChartRenderer({ measurement }: { measurement: Measurement }) {
                 ? `No magnitude data for ${data.categoryTitle}`
                 : "No events to display"}
             </Typography>
-          </Box>
+          </Stack>
         );
       }
       const chartData = [
@@ -250,16 +249,15 @@ function ChartRenderer({ measurement }: { measurement: Measurement }) {
 
 function EmptyState() {
   return (
-    <Box
+    <Stack
       sx={{
-        display: "flex",
         alignItems: "center",
         justifyContent: "center",
         height: "100%",
       }}
     >
       <Typography color="text.secondary">No data to display</Typography>
-    </Box>
+    </Stack>
   );
 }
 
