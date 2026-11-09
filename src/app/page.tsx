@@ -128,12 +128,9 @@ export default function HomePage() {
          *   1=Map, 2=CategoryFilter, 3=BriefingCard, 4=Chart, 5=RecentEvents.
          *   Outer Box gap:3 provides uniform vertical spacing.
          */
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: { xs: "column", md: "row" },
-            gap: 3,
-          }}
+        <Stack
+          direction={{ xs: "column", md: "row" }}
+          spacing={3}
         >
           {/* Left column: Map + Recent Events */}
           <Stack
@@ -207,7 +204,7 @@ export default function HomePage() {
               </Box>
             )}
           </Stack>
-        </Box>
+        </Stack>
       )}
     </Stack>
   );
