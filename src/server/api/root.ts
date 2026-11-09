@@ -4,12 +4,16 @@ import { eonetClient } from "@/server/eonet/client";
 import { EonetUpstreamError } from "@/server/eonet/errors";
 import { shapeResponse } from "@/server/eonet/shape";
 import { eventsInputSchema } from "@/server/eonet/input";
+import type { WindowDays } from "@/server/eonet/types";
 import { RedisEventsCache } from "@/server/cache/redis-cache";
 import { CacheUnavailableError } from "@/server/cache/errors";
 import { REGIONS } from "@/server/regions/lookup";
 import { computeAllMeasurements } from "@/server/measurements";
 import { MEASUREMENT_IDS, type MeasurementId } from "@/server/measurements/types";
 import { measurementsSchema } from "@/server/measurements/schema";
+import { briefingClient } from "@/server/briefing";
+import { buildBriefingPayload } from "@/server/briefing/payload";
+import { BriefingError } from "@/server/briefing/errors";
 
 const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
 
@@ -139,6 +143,70 @@ export const appRouter = router({
         }
         if (error instanceof EonetUpstreamError) {
           // Surface typed errors with user-friendly messages
+          throw new Error(error.userMessage);
+        }
+        throw error;
+      }
+    }),
+
+  /**
+   * Generates an AI Briefing summary for the current data.
+   *
+   * Takes the Window and uses the server-computed Measurements to build a
+   * bounded payload, calls Claude via the Vercel AI SDK, and validates the
+   * output against a Zod schema. Results are cached by input hash so the
+   * same data never costs a second AI call.
+   *
+   * This is a soft dependency: AI failures surface as typed errors with
+   * user-friendly messages, so the map, list and chart keep working.
+   */
+  briefing: publicProcedure
+    .input(eventsInputSchema)
+    .output(
+      z.object({
+        summary: z.string(),
+        measurementId: z.enum(MEASUREMENT_IDS),
+        measurementTitle: z.string(),
+      }),
+    )
+    .query(async ({ input }) => {
+      try {
+        // Fetch the events and compute Measurements (same as the events procedure)
+        const cached = await eventsCache.getOrFetch(input.windowDays, async () => {
+          const raw = await eonetClient.fetchEvents(input.windowDays);
+          return shapeResponse(raw, input.windowDays);
+        });
+
+        const measurements = computeAllMeasurements(cached.data.events);
+        const defaultMeasurementId = determineDefaultMeasurement(measurements);
+        const defaultMeasurement = measurements[defaultMeasurementId];
+
+        // Build the payload and call the AI
+        const payload = buildBriefingPayload({
+          measurements,
+          windowDays: input.windowDays as WindowDays,
+          totalEventCount: cached.data.events.length,
+          stale: cached.stale,
+        });
+
+        const result = await briefingClient.generateBriefing(payload);
+
+        return {
+          summary: result.summary,
+          measurementId: defaultMeasurementId,
+          measurementTitle: defaultMeasurement.title,
+        };
+      } catch (error) {
+        if (error instanceof BriefingError) {
+          // Surface AI errors with user-friendly messages
+          throw new Error(error.userMessage);
+        }
+        if (error instanceof CacheUnavailableError) {
+          throw new Error(
+            "The cache service is unavailable. Please try again in a moment.",
+          );
+        }
+        if (error instanceof EonetUpstreamError) {
           throw new Error(error.userMessage);
         }
         throw error;

@@ -16,6 +16,18 @@ vi.mock("@/server/cache/redis-cache", () => {
   return { RedisEventsCache: MockRedisEventsCache };
 });
 
+// Mock the briefing module so tests don't trigger AI SDK or env loading.
+vi.mock("@/server/briefing", () => {
+  return {
+    briefingClient: {
+      generateBriefing: vi.fn(async () => ({
+        summary: "Mock briefing summary for testing.",
+        usage: { inputTokens: 0, outputTokens: 0 },
+      })),
+    },
+  };
+});
+
 describe("appRouter.health", () => {
   it("reports the app as ok", async () => {
     const caller = appRouter.createCaller({});
