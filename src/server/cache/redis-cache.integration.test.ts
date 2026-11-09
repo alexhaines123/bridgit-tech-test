@@ -93,6 +93,7 @@ function makeShapingResult(id: string = "EONET_TEST"): ShapingResult {
         historyLength: 1,
         historyTrimmed: false,
         region: "Africa",
+        earliestDate: new Date().toISOString(),
       },
     ],
     rawSizeBytes: 100,

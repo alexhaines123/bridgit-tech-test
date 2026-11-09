@@ -1,6 +1,18 @@
 "use client";
 
-import { Card, CardContent, Typography, Stack, Table, TableBody, TableCell, TableHead, TableRow, Box } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
+import {
+  Card,
+  CardContent,
+  Typography,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Box,
+} from "@mui/material";
 import {
   BarChart,
   Bar,
@@ -52,198 +64,200 @@ export function MeasurementChart({ measurement, caption }: MeasurementChartProps
 }
 
 function ChartRenderer({ measurement }: { measurement: Measurement }) {
+  const theme = useTheme();
+  const gridColor = theme.palette.divider;
+  const axisColor = theme.palette.text.secondary;
+  const tooltipBg = theme.palette.background.paper;
+  const tooltipBorder = theme.palette.divider;
+
+  const commonGrid = <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />;
+  const commonXAxis = (
+    <XAxis
+      stroke={axisColor}
+      tick={{ fontSize: 12, fill: axisColor }}
+      angle={-45}
+      textAnchor="end"
+      height={80}
+    />
+  );
+  const commonYAxis = (
+    <YAxis stroke={axisColor} tick={{ fontSize: 12, fill: axisColor }} />
+  );
+  const commonTooltip = (
+    <Tooltip
+      contentStyle={{
+        backgroundColor: tooltipBg,
+        border: `1px solid ${tooltipBorder}`,
+        borderRadius: 4,
+        color: theme.palette.text.primary,
+      }}
+    />
+  );
+
   switch (measurement.id) {
-    case "eventsByCategory":
-      return <EventsByCategoryChart data={measurement.data} />;
-    case "eventsByRegion":
-      return <EventsByRegionChart data={measurement.data} />;
-    case "biggestInCategory":
-      return <BiggestInCategoryChart data={measurement.data} />;
-    case "newVsOngoing":
-      return <NewVsOngoingChart data={measurement.data} />;
-    case "startedPerDay":
-      return <StartedPerDayChart data={measurement.data} />;
+    case "eventsByCategory": {
+      if (measurement.data.length === 0) return <EmptyState />;
+      return (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={measurement.data}>
+            {commonGrid}
+            <XAxis
+              dataKey="categoryTitle"
+              stroke={axisColor}
+              tick={{ fontSize: 12, fill: axisColor }}
+              angle={-45}
+              textAnchor="end"
+              height={80}
+            />
+            {commonYAxis}
+            {commonTooltip}
+            <Bar dataKey="count" fill={theme.palette.primary.main} name="Events" />
+          </BarChart>
+        </ResponsiveContainer>
+      );
+    }
+    case "eventsByRegion": {
+      if (measurement.data.length === 0) return <EmptyState />;
+      return (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={measurement.data}>
+            {commonGrid}
+            <XAxis
+              dataKey="region"
+              stroke={axisColor}
+              tick={{ fontSize: 12, fill: axisColor }}
+              angle={-45}
+              textAnchor="end"
+              height={80}
+            />
+            {commonYAxis}
+            {commonTooltip}
+            <Bar dataKey="count" fill={theme.palette.success.main} name="Events" />
+          </BarChart>
+        </ResponsiveContainer>
+      );
+    }
+    case "biggestInCategory": {
+      const data = measurement.data;
+      if (!data.eventId || data.magnitudeValue === null) {
+        return (
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              height: "100%",
+            }}
+          >
+            <Typography color="text.secondary">
+              {data.categoryTitle
+                ? `No magnitude data for ${data.categoryTitle}`
+                : "No events to display"}
+            </Typography>
+          </Box>
+        );
+      }
+      const chartData = [
+        {
+          name: data.eventTitle || "Event",
+          value: data.magnitudeValue,
+          unit: data.magnitudeUnit,
+        },
+      ];
+      return (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData}>
+            {commonGrid}
+            <XAxis
+              dataKey="name"
+              stroke={axisColor}
+              tick={{ fontSize: 12, fill: axisColor }}
+            />
+            <YAxis
+              stroke={axisColor}
+              tick={{ fontSize: 12, fill: axisColor }}
+              label={{
+                value: data.magnitudeUnit ?? "",
+                angle: -90,
+                position: "insideLeft",
+                fill: axisColor,
+              }}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: tooltipBg,
+                border: `1px solid ${tooltipBorder}`,
+                borderRadius: 4,
+              }}
+              formatter={(value) => [
+                `${value} ${data.magnitudeUnit}`,
+                "Magnitude",
+              ]}
+            />
+            <Bar
+              dataKey="value"
+              fill={theme.palette.warning.main}
+              name="Magnitude"
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      );
+    }
+    case "newVsOngoing": {
+      const chartData = [
+        { name: "New", value: measurement.data.newCount },
+        { name: "Ongoing", value: measurement.data.ongoingCount },
+      ];
+      return (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData}>
+            {commonGrid}
+            <XAxis
+              dataKey="name"
+              stroke={axisColor}
+              tick={{ fontSize: 12, fill: axisColor }}
+            />
+            {commonYAxis}
+            {commonTooltip}
+            <Bar dataKey="value" fill={theme.palette.info.main} name="Events" />
+          </BarChart>
+        </ResponsiveContainer>
+      );
+    }
+    case "startedPerDay": {
+      if (measurement.data.length === 0) return <EmptyState />;
+      return (
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={measurement.data}>
+            {commonGrid}
+            {commonXAxis}
+            {commonYAxis}
+            {commonTooltip}
+            <Line
+              type="monotone"
+              dataKey="count"
+              stroke={theme.palette.primary.main}
+              strokeWidth={2}
+              dot={{ fill: theme.palette.primary.main }}
+              name="Events"
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      );
+    }
   }
-}
-
-function EventsByCategoryChart({ data }: { data: Extract<Measurement, { id: "eventsByCategory" }>["data"] }) {
-  if (data.length === 0) {
-    return <EmptyState />;
-  }
-
-  return (
-    <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#30363d" />
-        <XAxis
-          dataKey="categoryTitle"
-          stroke="#8b949e"
-          tick={{ fontSize: 12 }}
-          angle={-45}
-          textAnchor="end"
-          height={80}
-        />
-        <YAxis stroke="#8b949e" tick={{ fontSize: 12 }} />
-        <Tooltip
-          contentStyle={{
-            backgroundColor: "#161b22",
-            border: "1px solid #30363d",
-            borderRadius: 4,
-          }}
-        />
-        <Bar dataKey="count" fill="#58a6ff" name="Events" />
-      </BarChart>
-    </ResponsiveContainer>
-  );
-}
-
-function EventsByRegionChart({ data }: { data: Extract<Measurement, { id: "eventsByRegion" }>["data"] }) {
-  if (data.length === 0) {
-    return <EmptyState />;
-  }
-
-  return (
-    <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#30363d" />
-        <XAxis
-          dataKey="region"
-          stroke="#8b949e"
-          tick={{ fontSize: 12 }}
-          angle={-45}
-          textAnchor="end"
-          height={80}
-        />
-        <YAxis stroke="#8b949e" tick={{ fontSize: 12 }} />
-        <Tooltip
-          contentStyle={{
-            backgroundColor: "#161b22",
-            border: "1px solid #30363d",
-            borderRadius: 4,
-          }}
-        />
-        <Bar dataKey="count" fill="#3fb950" name="Events" />
-      </BarChart>
-    </ResponsiveContainer>
-  );
-}
-
-function BiggestInCategoryChart({ data }: { data: Extract<Measurement, { id: "biggestInCategory" }>["data"] }) {
-  if (!data.eventId || data.magnitudeValue === null) {
-    return (
-      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
-        <Typography color="text.secondary">
-          {data.categoryTitle
-            ? `No magnitude data for ${data.categoryTitle}`
-            : "No events to display"}
-        </Typography>
-      </Box>
-    );
-  }
-
-  const chartData = [
-    {
-      name: data.eventTitle || "Event",
-      value: data.magnitudeValue,
-      unit: data.magnitudeUnit,
-    },
-  ];
-
-  return (
-    <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={chartData}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#30363d" />
-        <XAxis dataKey="name" stroke="#8b949e" tick={{ fontSize: 12 }} />
-        <YAxis
-          stroke="#8b949e"
-          tick={{ fontSize: 12 }}
-          label={{
-            value: data.magnitudeUnit,
-            angle: -90,
-            position: "insideLeft",
-            fill: "#8b949e",
-          }}
-        />
-        <Tooltip
-          contentStyle={{
-            backgroundColor: "#161b22",
-            border: "1px solid #30363d",
-            borderRadius: 4,
-          }}
-          formatter={(value) => [`${value} ${data.magnitudeUnit}`, "Magnitude"]}
-        />
-        <Bar dataKey="value" fill="#f0883e" name="Magnitude" />
-      </BarChart>
-    </ResponsiveContainer>
-  );
-}
-
-function NewVsOngoingChart({ data }: { data: Extract<Measurement, { id: "newVsOngoing" }>["data"] }) {
-  const chartData = [
-    { name: "New", value: data.newCount },
-    { name: "Ongoing", value: data.ongoingCount },
-  ];
-
-  return (
-    <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={chartData}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#30363d" />
-        <XAxis dataKey="name" stroke="#8b949e" tick={{ fontSize: 12 }} />
-        <YAxis stroke="#8b949e" tick={{ fontSize: 12 }} />
-        <Tooltip
-          contentStyle={{
-            backgroundColor: "#161b22",
-            border: "1px solid #30363d",
-            borderRadius: 4,
-          }}
-        />
-        <Bar dataKey="value" fill="#a371f7" name="Events" />
-      </BarChart>
-    </ResponsiveContainer>
-  );
-}
-
-function StartedPerDayChart({ data }: { data: Extract<Measurement, { id: "startedPerDay" }>["data"] }) {
-  if (data.length === 0) {
-    return <EmptyState />;
-  }
-
-  return (
-    <ResponsiveContainer width="100%" height="100%">
-      <LineChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#30363d" />
-        <XAxis
-          dataKey="date"
-          stroke="#8b949e"
-          tick={{ fontSize: 12 }}
-          angle={-45}
-          textAnchor="end"
-          height={80}
-        />
-        <YAxis stroke="#8b949e" tick={{ fontSize: 12 }} />
-        <Tooltip
-          contentStyle={{
-            backgroundColor: "#161b22",
-            border: "1px solid #30363d",
-            borderRadius: 4,
-          }}
-        />
-        <Line
-          type="monotone"
-          dataKey="count"
-          stroke="#58a6ff"
-          strokeWidth={2}
-          dot={{ fill: "#58a6ff" }}
-          name="Events"
-        />
-      </LineChart>
-    </ResponsiveContainer>
-  );
 }
 
 function EmptyState() {
   return (
-    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+    <Box
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        height: "100%",
+      }}
+    >
       <Typography color="text.secondary">No data to display</Typography>
     </Box>
   );
@@ -333,7 +347,9 @@ function ChartAlternative({ measurement }: { measurement: Measurement }) {
             </TableRow>
             <TableRow>
               <TableCell>Ongoing</TableCell>
-              <TableCell align="right">{measurement.data.ongoingCount}</TableCell>
+              <TableCell align="right">
+                {measurement.data.ongoingCount}
+              </TableCell>
             </TableRow>
           </TableBody>
         </Table>

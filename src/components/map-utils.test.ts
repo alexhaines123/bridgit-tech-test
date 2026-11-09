@@ -24,6 +24,7 @@ const makeEvent = (
   historyLength: 1,
   historyTrimmed: false,
   region: deriveRegion([lon, lat]),
+  earliestDate: "2026-11-01T00:00:00Z",
 });
 
 describe("eventsToGeoJSON", () => {

@@ -5,7 +5,6 @@ export {
   computeNewVsOngoing,
   computeStartedPerDay,
   computeAllMeasurements,
-  getMeasurement,
 } from "./compute";
 
 export {

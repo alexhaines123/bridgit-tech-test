@@ -23,6 +23,7 @@ const makeEvent = (id: string, categoryId: string, categoryTitle?: string): Shap
   historyLength: 1,
   historyTrimmed: false,
   region: deriveRegion([0, 0]),
+  earliestDate: "2026-11-01T00:00:00Z",
 });
 
 const events: ShapedEvent[] = [

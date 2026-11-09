@@ -125,6 +125,7 @@ describe("shapeEvent", () => {
     expect(shaped.historyLength).toBe(2);
     expect(shaped.historyTrimmed).toBe(false);
     expect(shaped.region).toBe("North America"); // [-121, 41] is in western US
+    expect(shaped.earliestDate).toBe("2024-01-01T00:00:00Z"); // oldest geometry
   });
 
   it("handles null magnitude gracefully", () => {
@@ -151,6 +152,7 @@ describe("shapeEvent", () => {
 
     expect(shaped.latest.magnitude).toBeNull();
     expect(shaped.region).toBe("Africa"); // [0, 0] falls within Africa's coarse bounding box
+    expect(shaped.earliestDate).toBe("2025-01-01T00:00:00Z");
   });
 
   it("marks closed events correctly", () => {
@@ -177,6 +179,7 @@ describe("shapeEvent", () => {
 
     expect(shaped.closed).toBe(true);
     expect(shaped.region).toBe("Africa"); // [0, 0] falls within Africa's coarse bounding box
+    expect(shaped.earliestDate).toBe("2024-12-30T00:00:00Z");
   });
 
   it("records trimming metadata for long histories", () => {
