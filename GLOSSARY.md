@@ -29,13 +29,13 @@ A named statistic from a fixed list that can be charted, such as Events by Categ
 _Avoid_: Metric, chart type, stat
 
 **Briefing**:
-The AI-written student-friendly text for a Window: a headline, key points, Notable Events, a chart caption and the Stress Index commentary.
-_Avoid_: Summary, report, digest
+The AI-written student-friendly text for a Window: a paragraph that reads the chart's Measurement, plus that chart's caption and the reason it was chosen. The headline, key points, Notable Events and Stress Index commentary are deferred (ADR 0006).
+_Avoid_: Report, digest
 
 **Notable Event**:
-An Event the Briefing singles out and explains in a sentence. It must refer to a real Event in the current data.
+An Event the Briefing singles out and explains in a sentence. It must refer to a real Event in the current data. Deferred: no current ticket delivers it (ADR 0006).
 _Avoid_: Highlight, top event, featured event
 
 **Planetary Stress Index**:
-An illustrative 0-100 score combining ratings of a few factors (Event volume, new-Event momentum, Category severity) with a documented formula. It is not a forecast of any real-world catastrophe.
+An illustrative 0-100 score combining ratings of a few factors (Event volume, new-Event momentum, Category severity) with a documented formula. It is not a forecast of any real-world catastrophe. Deferred with ticket #18 (ADR 0006).
 _Avoid_: Doomsday score, risk score, prediction

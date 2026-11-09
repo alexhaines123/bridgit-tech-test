@@ -1,5 +1,7 @@
 # The AI judges and explains; the server computes every number
 
+> The Planetary Stress Index paragraphs below are deferred by ADR 0006: no rubrics, formula, baseline, score or gauge ship for now. The principle in this ADR is unchanged and still governs the Briefing summary and the AI-chosen Measurement.
+
 The AI never produces a figure that is charted or scored. The server computes all statistics from real EONET data using a fixed list of Measurements. For the Planetary Stress Index, Claude rates a small set of factors (such as Event volume, new-Event momentum and Category severity) on fixed, ordered rubric scales, and the server combines those ratings into the 0-100 score with a documented formula. A rule-based baseline rates the same factors, so a score still exists when the AI is unavailable. The AI also picks which Measurement is most interesting, names Notable Events, and writes the narrative. Its output is checked against a schema and against the real data (for example, every Notable Event ID must exist and every rating must be a defined level) before it is used.
 
 A model asked to produce chart values or a "world-ending probability" will return confident, plausible numbers with no basis. Those numbers cannot be explained or reproduced when asked "why 42?", and would fail the requirement to validate AI output before using it. Constraining the AI to bounded ratings keeps its judgement in the result while the number stays bounded and explainable.
