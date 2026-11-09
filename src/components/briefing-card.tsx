@@ -24,6 +24,9 @@ interface BriefingCardProps {
  *
  * The Briefing is a soft dependency: when the AI fails, only this card
  * shows an error. The rest of the dashboard keeps functioning.
+ *
+ * Per ticket #21: the Briefing includes the AI-chosen Measurement, a caption,
+ * and a reason why it was chosen.
  */
 export function BriefingCard({ windowDays }: BriefingCardProps) {
   const briefing = trpc.briefing.useQuery({ windowDays });
@@ -70,6 +73,16 @@ export function BriefingCard({ windowDays }: BriefingCardProps) {
               <Box sx={{ typography: "body1" }}>
                 {briefing.data.summary}
               </Box>
+              {briefing.data.caption && (
+                <Typography variant="caption" color="text.secondary">
+                  Caption: {briefing.data.caption}
+                </Typography>
+              )}
+              {briefing.data.reason && (
+                <Typography variant="caption" color="text.secondary">
+                  Why: {briefing.data.reason}
+                </Typography>
+              )}
             </Stack>
           )}
         </Stack>

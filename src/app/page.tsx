@@ -48,6 +48,7 @@ export default function HomePage() {
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   const events = trpc.events.useQuery({ windowDays });
+  const briefing = trpc.briefing.useQuery({ windowDays });
 
   // Derive available categories from all events
   const allCategories = useMemo(
@@ -69,13 +70,39 @@ export default function HomePage() {
     [events.data, selectedCategories],
   );
 
-  // The current Measurement to chart: the deterministic default until the AI chooses
+  // The current Measurement to chart:
+  // - If the briefing succeeded, use the AI-chosen Measurement
+  // - Otherwise, fall back to the deterministic default
   const currentMeasurement = useMemo<Measurement | null>(() => {
     if (!events.data) return null;
     const measurements = events.data.measurements as MeasurementSummary;
+
+    // Use the AI-chosen Measurement if the briefing succeeded
+    if (briefing.isSuccess && briefing.data.chosenMeasurementId) {
+      const chosenId = briefing.data.chosenMeasurementId as MeasurementId;
+      return measurements[chosenId];
+    }
+
+    // Fall back to the deterministic default
     const defaultId = events.data.defaultMeasurementId as MeasurementId;
     return measurements[defaultId];
-  }, [events.data]);
+  }, [events.data, briefing.isSuccess, briefing.data]);
+
+  // Chart caption: use the AI's caption if available, otherwise a default
+  const chartCaption = useMemo<string>(() => {
+    if (briefing.isSuccess && briefing.data.caption) {
+      return briefing.data.caption;
+    }
+    return "Showing the default Measurement.";
+  }, [briefing.isSuccess, briefing.data]);
+
+  // Chart reason: the AI's reason, shown below the caption
+  const chartReason = useMemo<string | null>(() => {
+    if (briefing.isSuccess && briefing.data.reason) {
+      return briefing.data.reason;
+    }
+    return null;
+  }, [briefing.isSuccess, briefing.data]);
 
   const handleRetry = () => {
     events.refetch();
@@ -139,10 +166,17 @@ export default function HomePage() {
 
           {/* Measurement chart */}
           {currentMeasurement && (
-            <MeasurementChart
-              measurement={currentMeasurement}
-              caption="Showing the default Measurement. AI-chosen Measurement coming in ticket #21."
-            />
+            <Stack spacing={0.5}>
+              <MeasurementChart
+                measurement={currentMeasurement}
+                caption={chartCaption}
+              />
+              {chartReason && (
+                <Typography variant="caption" color="text.secondary" sx={{ px: 2, pb: 1 }}>
+                  Why this chart: {chartReason}
+                </Typography>
+              )}
+            </Stack>
           )}
 
           {/* AI Briefing */}
