@@ -260,6 +260,34 @@ describe("RedisEventsCache (integration)", () => {
         "EONET is down",
       );
     });
+
+    it("stale fallback still works with the 2h fresh TTL (ticket #32)", async () => {
+      // Populate cache so both fresh and stale keys are written.
+      const original = makeShapingResult("EONET_STALE_2H");
+      await cache.getOrFetch(30, async () => original);
+
+      // Verify the stale key has its own independent 24h TTL — it must NOT
+      // have been shortened by the fresh TTL change from 60s to 7200s.
+      const staleTtl = await adminClient.ttl(staleKey(30));
+      expect(staleTtl).toBeGreaterThan(FRESH_TTL_SECONDS);
+      expect(staleTtl).toBeLessThanOrEqual(STALE_TTL_SECONDS);
+
+      // Simulate the fresh key expiring after its 2h TTL (we just delete it).
+      await adminClient.del(freshKey(30));
+
+      // Upstream fails — the cache must fall back to the stale copy.
+      const failingFetcher = async () => {
+        throw new Error("EONET is down");
+      };
+
+      const cached = await cache.getOrFetch(30, failingFetcher);
+
+      expect(cached.stale).toBe(true);
+      expect(cached.data.events[0].id).toBe("EONET_STALE_2H");
+      expect(cached.staleAgeMs).toBeDefined();
+      expect(cached.staleAgeMs!).toBeGreaterThanOrEqual(0);
+      expect(cached.cachedAt).toBeDefined();
+    });
   });
 
   describe("Redis down", () => {
