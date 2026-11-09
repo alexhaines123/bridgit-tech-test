@@ -12,6 +12,10 @@ This is a single-context repo: domain docs live in root `GLOSSARY.md` and `docs/
 
 Structure PRs with multiple logical commits following the code flow (data → API → UI), not one large commit. Read `docs/agents/pr-conventions.md` for commit ordering, PR description language rules (ASD-STE100 + ubiquitous language from `GLOSSARY.md`), and examples.
 
+## Code review
+
+Read `CODING_STANDARDS.md` during review. These are the mechanical rules the reviewer enforces.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 ## This is NOT the Next.js you know
