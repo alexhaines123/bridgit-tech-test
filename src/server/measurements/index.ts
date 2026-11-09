@@ -7,6 +7,8 @@ export {
   computeAllMeasurements,
 } from "./compute";
 
+export { isMeasurementApplicable } from "./applicable";
+
 export {
   MEASUREMENT_IDS,
   type MeasurementId,
