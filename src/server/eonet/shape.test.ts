@@ -124,6 +124,7 @@ describe("shapeEvent", () => {
     expect(shaped.latest.magnitude).toEqual({ value: 200.0, unit: "acres" });
     expect(shaped.historyLength).toBe(2);
     expect(shaped.historyTrimmed).toBe(false);
+    expect(shaped.region).toBe("North America"); // [-121, 41] is in western US
   });
 
   it("handles null magnitude gracefully", () => {
@@ -149,6 +150,7 @@ describe("shapeEvent", () => {
     const shaped = shapeEvent(raw);
 
     expect(shaped.latest.magnitude).toBeNull();
+    expect(shaped.region).toBe("Africa"); // [0, 0] falls within Africa's coarse bounding box
   });
 
   it("marks closed events correctly", () => {
@@ -174,6 +176,7 @@ describe("shapeEvent", () => {
     const shaped = shapeEvent(raw);
 
     expect(shaped.closed).toBe(true);
+    expect(shaped.region).toBe("Africa"); // [0, 0] falls within Africa's coarse bounding box
   });
 
   it("records trimming metadata for long histories", () => {
