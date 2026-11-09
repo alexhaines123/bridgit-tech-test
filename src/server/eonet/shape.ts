@@ -1,5 +1,6 @@
 import type { EonetEvent, EonetResponse } from "./schema";
 import type { ShapedEvent, ShapingResult } from "./types";
+import { deriveRegion } from "@/server/regions/lookup";
 
 /**
  * Maximum number of geometry entries to keep per event.
@@ -40,10 +41,22 @@ export function trimGeometry(
 /**
  * Shapes a single raw EONET event into a domain ShapedEvent.
  * The latest location is the first entry after trimming (most recent).
+ * A Region is derived from the latest coordinates using a coarse lookup.
+ * The earliestDate is derived from the oldest entry before trimming, so
+ * "Started per day" counts Events by when they first appeared.
  */
 export function shapeEvent(raw: EonetEvent): ShapedEvent {
   const { trimmed, originalLength, wasTrimmed } = trimGeometry(raw.geometry);
   const latest = trimmed[0];
+  const region = deriveRegion(latest.coordinates);
+
+  // The earliest date is the oldest entry in the original geometry
+  // (before trimming). We compute it from the full array so trimming
+  // doesn't lose it.
+  const earliestEntry = raw.geometry.reduce((oldest, entry) =>
+    entry.date < oldest.date ? entry : oldest,
+  );
+  const earliestDate = earliestEntry.date;
 
   return {
     id: raw.id,
@@ -63,6 +76,8 @@ export function shapeEvent(raw: EonetEvent): ShapedEvent {
     },
     historyLength: originalLength,
     historyTrimmed: wasTrimmed,
+    region,
+    earliestDate,
   };
 }
 

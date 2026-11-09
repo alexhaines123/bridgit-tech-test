@@ -13,6 +13,7 @@ import { trpc } from "@/lib/trpc/react";
 import { WindowSelector } from "@/components/window-selector";
 import { EventList } from "@/components/event-list";
 import { CategoryFilter } from "@/components/category-filter";
+import { MeasurementChart } from "@/components/measurement-chart";
 import dynamic from "next/dynamic";
 import { DEFAULT_WINDOW_DAYS, type WindowDays } from "@/server/eonet/types";
 import {
@@ -20,13 +21,13 @@ import {
   getCategoriesFromEvents,
   getCategoryTitlesFromEvents,
 } from "@/lib/filters";
+import type { Measurement, MeasurementId, MeasurementSummary } from "@/server/measurements/types";
 
 // Dynamic import for the map to avoid SSR issues with WebGL
 const EventMap = dynamic(() => import("@/components/event-map"), {
   loading: () => (
-    <Box
+    <Stack
       sx={{
-        display: "flex",
         justifyContent: "center",
         alignItems: "center",
         height: 500,
@@ -35,7 +36,7 @@ const EventMap = dynamic(() => import("@/components/event-map"), {
       }}
     >
       <CircularProgress />
-    </Box>
+    </Stack>
   ),
   ssr: false,
 });
@@ -67,6 +68,14 @@ export default function HomePage() {
     [events.data, selectedCategories],
   );
 
+  // The current Measurement to chart: the deterministic default until the AI chooses
+  const currentMeasurement = useMemo<Measurement | null>(() => {
+    if (!events.data) return null;
+    const measurements = events.data.measurements as MeasurementSummary;
+    const defaultId = events.data.defaultMeasurementId as MeasurementId;
+    return measurements[defaultId];
+  }, [events.data]);
+
   const handleRetry = () => {
     events.refetch();
   };
@@ -88,9 +97,9 @@ export default function HomePage() {
       </Stack>
 
       {events.isPending && (
-        <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+        <Stack sx={{ justifyContent: "center", py: 8 }}>
           <CircularProgress />
-        </Box>
+        </Stack>
       )}
 
       {events.isError && (
@@ -126,6 +135,14 @@ export default function HomePage() {
               onSelectEvent={handleSelectEvent}
             />
           </Box>
+
+          {/* Measurement chart */}
+          {currentMeasurement && (
+            <MeasurementChart
+              measurement={currentMeasurement}
+              caption="Showing the default Measurement. AI-chosen Measurement coming in ticket #21."
+            />
+          )}
 
           {/* Event list */}
           <EventList

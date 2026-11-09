@@ -115,6 +115,9 @@ function EventCard({
             <Typography variant="body2" color="text.secondary">
               {date}
             </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {event.region}
+            </Typography>
             {event.closed && (
               <Chip label="Closed" size="small" variant="outlined" color="default" />
             )}

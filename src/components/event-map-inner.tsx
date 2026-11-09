@@ -220,6 +220,9 @@ function EventDetailsPopup({ event }: { event: ShapedEvent }) {
         <Typography variant="caption" color="text.secondary">
           {date}
         </Typography>
+        <Typography variant="caption" color="text.secondary">
+          {event.region}
+        </Typography>
       </Stack>
       {event.latest.magnitude && (
         <Typography variant="body2" sx={{ mb: 1 }}>

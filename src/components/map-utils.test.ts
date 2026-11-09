@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { eventsToGeoJSON } from "./map-utils";
 import type { ShapedEvent } from "@/server/eonet/types";
+import { deriveRegion } from "@/server/regions/lookup";
 
 const makeEvent = (
   id: string,
@@ -22,6 +23,8 @@ const makeEvent = (
   },
   historyLength: 1,
   historyTrimmed: false,
+  region: deriveRegion([lon, lat]),
+  earliestDate: "2026-11-01T00:00:00Z",
 });
 
 describe("eventsToGeoJSON", () => {

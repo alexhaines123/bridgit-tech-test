@@ -122,6 +122,36 @@ All 13 colours hit ≥3:1 against the dark background (WCAG 2.1 SC 1.4.11). Wild
 
 ---
 
+## 9. MUI component patterns
+
+**Decision:** Use MUI's `<Stack>` for flex layouts, `<Box>` for sizing and positioning.
+
+**Why:** `<Stack>` is a flex container with built-in spacing, direction, and alignment props. Using it for flex layouts keeps the codebase consistent and avoids repetitive `sx={{ display: "flex" }}` boilerplate. `<Box>` remains available for sizing, positioning, and non-flex containers where `<Stack>`'s flex defaults don't apply.
+
+**Patterns:**
+
+```tsx
+// ✅ Vertical or horizontal stack with spacing
+<Stack direction="row" spacing={2} alignItems="center">
+  <Chip label="Category" />
+  <Typography>Label</Typography>
+</Stack>
+
+// ✅ Sizing container (no flex children)
+<Box sx={{ width: "100%", height: 300 }}>
+  <ResponsiveContainer>
+    <Chart />
+  </ResponsiveContainer>
+</Box>
+
+// ❌ Box with display: flex — use Stack instead
+<Box sx={{ display: "flex", alignItems: "center" }}>
+  <Chip label="Category" />
+</Box>
+```
+
+---
+
 ## Questions for later review
 
 These are the decisions most likely to be challenged. Notes for whoever picks them up:
