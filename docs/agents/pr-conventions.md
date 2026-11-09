@@ -24,6 +24,25 @@ Write PR descriptions using:
 - Example: Use "Window" not "range" or "period"
 - Example: Use "Category" not "type" or "kind"
 
+## Issue Linking
+
+PR descriptions must use GitHub's linking keywords to auto-close issues when merged:
+
+- **Closes #N** - standard for completing work
+- **Fixes #N** - when fixing a bug
+- **Resolves #N** - when resolving a question or blocker
+
+**Example:**
+```markdown
+## Summary
+
+Closes #19.
+
+[rest of PR description...]
+```
+
+**Why:** GitHub only recognizes these keywords. "Implements", "Addresses", "For" don't create links or auto-close.
+
 ### Good PR Description Example
 
 ```
