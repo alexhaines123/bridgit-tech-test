@@ -49,7 +49,6 @@ export default function HomePage() {
 
   const events = trpc.events.useQuery({ windowDays });
 
-  // Derive available categories from all events
   const allCategories = useMemo(
     () => (events.data ? getCategoriesFromEvents(events.data.events) : []),
     [events.data],
@@ -60,7 +59,6 @@ export default function HomePage() {
     [events.data],
   );
 
-  // Filter events by selected categories
   const filteredEvents = useMemo(
     () =>
       events.data
@@ -69,7 +67,6 @@ export default function HomePage() {
     [events.data, selectedCategories],
   );
 
-  // Map the startedPerDay Measurement for the sidebar Activity chart
   const startedPerDayMeasurement = useMemo(() => {
     if (!events.data) return null;
     const measurements = events.data.measurements as MeasurementSummary;
@@ -118,94 +115,98 @@ export default function HomePage() {
 
       {events.isSuccess && (
         /*
-         * Responsive grid layout.
-         * Desktop (md+): 2-column grid — Map + Recent Events in column 1,
-         *   CategoryFilter + BriefingCard + MeasurementChart in column 2.
-         * Mobile (xs): single column, items ordered: Map → CategoryFilter →
-         *   BriefingCard → MeasurementChart → RecentEventsCompact.
+         * Responsive layout using flex + display:contents.
+         *
+         * Desktop (md+): outer Box is flex-row. Two Stacks act as independent
+         *   columns — left (Map + Recent Events), right (CategoryFilter →
+         *   BriefingCard → MeasurementChart). Each Stack uses gap for internal
+         *   spacing. Sidebar items stack from the top, aligned with the map.
+         *
+         * Mobile (xs): outer Box is flex-column. Stacks use display:contents
+         *   so their children become direct flex children of the outer Box.
+         *   Each child's `order` controls visual position:
+         *   1=Map, 2=CategoryFilter, 3=BriefingCard, 4=Chart, 5=RecentEvents.
+         *   Outer Box gap:3 provides uniform vertical spacing.
          */
         <Box
           sx={{
-            display: "grid",
+            display: "flex",
+            flexDirection: { xs: "column", md: "row" },
             gap: 3,
-            gridTemplateColumns: { xs: "1fr", md: "2fr 1fr" },
           }}
         >
-          {/* Map — column 1 on desktop, order 1 on mobile */}
-          <Box
+          {/* Left column: Map + Recent Events */}
+          <Stack
             sx={{
-              gridColumn: { xs: "1", md: "1" },
-              order: { xs: 1, md: 1 },
+              flex: 2,
+              minWidth: 0,
+              display: { xs: "contents", md: "flex" },
+              flexDirection: "column",
+              gap: { xs: 0, md: 3 },
             }}
           >
-            <Box
-              sx={{
-                borderRadius: 1,
-                overflow: "hidden",
-                border: "1px solid",
-                borderColor: "divider",
-                height: 400,
-              }}
-            >
-              <EventMap
-                events={filteredEvents}
-                selectedEventId={selectedEventId}
-                onSelectEvent={handleSelectEvent}
-              />
+            {/* Map — order 1 on mobile, default on desktop */}
+            <Box sx={{ order: { xs: 1, md: 0 } }}>
+              <Box
+                sx={{
+                  borderRadius: 1,
+                  overflow: "hidden",
+                  border: "1px solid",
+                  borderColor: "divider",
+                  height: 400,
+                }}
+              >
+                <EventMap
+                  events={filteredEvents}
+                  selectedEventId={selectedEventId}
+                  onSelectEvent={handleSelectEvent}
+                />
+              </Box>
             </Box>
-          </Box>
 
-          {/* Category filter — column 2 on desktop, order 2 on mobile */}
-          {allCategories.length > 0 && (
-            <Box
-              sx={{
-                gridColumn: { xs: "1", md: "2" },
-                order: { xs: 2, md: 2 },
-              }}
-            >
-              <CategoryFilter
-                categories={allCategories}
-                categoryTitles={categoryTitles}
-                selected={selectedCategories}
-                onChange={setSelectedCategories}
-              />
+            {/* Recent Events — order 5 (last) on mobile, default on desktop */}
+            <Box sx={{ order: { xs: 5, md: 0 } }}>
+              <RecentEventsCompact events={filteredEvents} maxItems={5} />
             </Box>
-          )}
+          </Stack>
 
-          {/* AI Briefing — column 2 on desktop, order 3 on mobile */}
-          <Box
+          {/* Right column: Sidebar */}
+          <Stack
             sx={{
-              gridColumn: { xs: "1", md: "2" },
-              order: { xs: 3, md: 3 },
+              flex: 1,
+              minWidth: 0,
+              display: { xs: "contents", md: "flex" },
+              flexDirection: "column",
+              gap: { xs: 0, md: 2 },
             }}
           >
-            <BriefingCard windowDays={windowDays} />
-          </Box>
+            {/* Category filter — order 2 on mobile */}
+            {allCategories.length > 0 && (
+              <Box sx={{ order: { xs: 2, md: 0 } }}>
+                <CategoryFilter
+                  categories={allCategories}
+                  categoryTitles={categoryTitles}
+                  selected={selectedCategories}
+                  onChange={setSelectedCategories}
+                />
+              </Box>
+            )}
 
-          {/* Event Activity chart (startedPerDay) — column 2 on desktop, order 4 on mobile */}
-          {startedPerDayMeasurement && (
-            <Box
-              sx={{
-                gridColumn: { xs: "1", md: "2" },
-                order: { xs: 4, md: 4 },
-              }}
-            >
-              <MeasurementChart
-                measurement={startedPerDayMeasurement}
-                caption="Events started per day in the current Window."
-              />
+            {/* AI Briefing — order 3 on mobile */}
+            <Box sx={{ order: { xs: 3, md: 0 } }}>
+              <BriefingCard windowDays={windowDays} />
             </Box>
-          )}
 
-          {/* Recent Events compact list — column 1 on desktop, order 5 on mobile (last) */}
-          <Box
-            sx={{
-              gridColumn: { xs: "1", md: "1" },
-              order: { xs: 5, md: 5 },
-            }}
-          >
-            <RecentEventsCompact events={filteredEvents} maxItems={5} />
-          </Box>
+            {/* Event Activity chart — order 4 on mobile */}
+            {startedPerDayMeasurement && (
+              <Box sx={{ order: { xs: 4, md: 0 } }}>
+                <MeasurementChart
+                  measurement={startedPerDayMeasurement}
+                  caption="Events started per day in the current Window."
+                />
+              </Box>
+            )}
+          </Stack>
         </Box>
       )}
     </Stack>
