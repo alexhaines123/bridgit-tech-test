@@ -4,6 +4,17 @@
 
 Structure PRs with multiple logical commits that follow the code flow, not one large commit.
 
+## PR Base Branch
+
+Before creating a PR, ensure your branch is based on the latest `main`:
+
+```bash
+git fetch origin main
+git merge origin/main
+```
+
+Resolve any conflicts, commit, and push. This ensures the PR diff only shows new work, not changes already in main.
+
 ## PR Description Language
 
 Write PR descriptions using:
