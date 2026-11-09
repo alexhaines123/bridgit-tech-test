@@ -3,6 +3,8 @@
  * and form the contract between the server and the UI.
  */
 
+import type { Region } from "@/server/regions/lookup";
+
 /**
  * The span of recent days whose Events the dashboard shows.
  * The Window filters on recent activity, not first-seen date: an Event
@@ -47,6 +49,8 @@ export interface ShapedEvent {
   historyLength: number;
   /** Whether this event had its history trimmed during shaping. */
   historyTrimmed: boolean;
+  /** Coarse Region derived from the latest coordinates. */
+  region: Region;
 }
 
 /**
