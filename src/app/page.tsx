@@ -14,6 +14,7 @@ import { WindowSelector } from "@/components/window-selector";
 import { EventList } from "@/components/event-list";
 import { CategoryFilter } from "@/components/category-filter";
 import { MeasurementChart } from "@/components/measurement-chart";
+import { BriefingCard } from "@/components/briefing-card";
 import dynamic from "next/dynamic";
 import { DEFAULT_WINDOW_DAYS, type WindowDays } from "@/server/eonet/types";
 import {
@@ -143,6 +144,9 @@ export default function HomePage() {
               caption="Showing the default Measurement. AI-chosen Measurement coming in ticket #21."
             />
           )}
+
+          {/* AI Briefing */}
+          <BriefingCard windowDays={windowDays} />
 
           {/* Event list */}
           <EventList
