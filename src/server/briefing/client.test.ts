@@ -50,6 +50,7 @@ const mockPayload: BriefingPayload = {
   windowDays: 30,
   totalEventCount: 5,
   stale: false,
+  defaultMeasurementId: "eventsByCategory",
 };
 
 describe("BriefingClient", () => {
@@ -161,9 +162,11 @@ describe("BriefingClient", () => {
     expect(callCount).toBe(2); // initial + 1 retry
   });
 
-  it("throws ai-rate-limited on 429", async () => {
+  it("throws ai-rate-limited on 429 after one retry", async () => {
+    let callCount = 0;
     server.use(
       http.post(`${ANTHROPIC_BASE_URL}/v1/messages`, () => {
+        callCount++;
         return HttpResponse.json(
           { error: { message: "Rate limit exceeded" } },
           { status: 429 },
@@ -186,11 +189,15 @@ describe("BriefingClient", () => {
         expect(error.code).toBe("ai-rate-limited");
       }
     }
+    // One retry = 2 total calls
+    expect(callCount).toBe(2);
   });
 
-  it("throws ai-timeout on timeout", async () => {
+  it("throws ai-timeout on timeout after one retry", async () => {
+    let callCount = 0;
     server.use(
       http.post(`${ANTHROPIC_BASE_URL}/v1/messages`, async () => {
+        callCount++;
         // Simulate a timeout by delaying the response
         await new Promise((resolve) => setTimeout(resolve, 5000));
         return HttpResponse.json({ error: "timeout" });
@@ -213,6 +220,8 @@ describe("BriefingClient", () => {
         expect(error.code).toBe("ai-timeout");
       }
     }
+    // One retry = 2 total calls
+    expect(callCount).toBe(2);
   });
 
   it("caches results by input hash", async () => {

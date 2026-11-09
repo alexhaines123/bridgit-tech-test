@@ -54,6 +54,7 @@ describe("buildBriefingPayload", () => {
       windowDays: 30 as WindowDays,
       totalEventCount: 8,
       stale: false,
+      defaultMeasurementId: "eventsByCategory",
     });
 
     expect(payload.measurements).toHaveProperty("eventsByCategory");
@@ -69,6 +70,7 @@ describe("buildBriefingPayload", () => {
       windowDays: 7 as WindowDays,
       totalEventCount: 10,
       stale: false,
+      defaultMeasurementId: "eventsByCategory",
     });
 
     expect(payload.windowDays).toBe(7);
@@ -80,6 +82,7 @@ describe("buildBriefingPayload", () => {
       windowDays: 30 as WindowDays,
       totalEventCount: 42,
       stale: false,
+      defaultMeasurementId: "eventsByCategory",
     });
 
     expect(payload.totalEventCount).toBe(42);
@@ -91,6 +94,7 @@ describe("buildBriefingPayload", () => {
       windowDays: 30 as WindowDays,
       totalEventCount: 10,
       stale: true,
+      defaultMeasurementId: "eventsByCategory",
     });
 
     expect(payload.stale).toBe(true);
@@ -102,6 +106,7 @@ describe("buildBriefingPayload", () => {
       windowDays: 30 as WindowDays,
       totalEventCount: 10,
       stale: false,
+      defaultMeasurementId: "eventsByCategory",
     });
 
     const payloadString = JSON.stringify(payload);
@@ -115,6 +120,7 @@ describe("buildBriefingPayload", () => {
       windowDays: 30 as WindowDays,
       totalEventCount: 10,
       stale: false,
+      defaultMeasurementId: "eventsByCategory",
     });
 
     expect(payload.measurements.biggestInCategory.data).not.toHaveProperty("eventId");
@@ -141,10 +147,23 @@ describe("buildBriefingPayload", () => {
       windowDays: 30 as WindowDays,
       totalEventCount: 1000,
       stale: false,
+      defaultMeasurementId: "eventsByCategory",
     });
 
     const payloadSize = JSON.stringify(payload).length;
     expect(payloadSize).toBeLessThanOrEqual(10_000); // 10KB cap
+  });
+
+  it("includes the default Measurement ID for the AI to focus on", () => {
+    const payload = buildBriefingPayload({
+      measurements: mockMeasurements,
+      windowDays: 30 as WindowDays,
+      totalEventCount: 10,
+      stale: false,
+      defaultMeasurementId: "eventsByRegion",
+    });
+
+    expect(payload.defaultMeasurementId).toBe("eventsByRegion");
   });
 
   it("serializes to JSON without error", () => {
@@ -153,6 +172,7 @@ describe("buildBriefingPayload", () => {
       windowDays: 30 as WindowDays,
       totalEventCount: 10,
       stale: false,
+      defaultMeasurementId: "eventsByCategory",
     });
 
     expect(() => JSON.stringify(payload)).not.toThrow();
