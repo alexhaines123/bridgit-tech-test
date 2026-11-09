@@ -55,8 +55,22 @@ export function MeasurementChart({ measurement, caption }: MeasurementChartProps
             </Typography>
           )}
 
-          {/* Accessible text/table alternative */}
-          <ChartAlternative measurement={measurement} />
+          {/* Accessible text/table alternative (visually hidden, available to screen readers) */}
+          <Box
+            sx={{
+              position: "absolute",
+              width: "1px",
+              height: "1px",
+              margin: "-1px",
+              padding: 0,
+              overflow: "hidden",
+              clip: "rect(0, 0, 0, 0)",
+              whiteSpace: "nowrap",
+              border: 0,
+            }}
+          >
+            <ChartAlternative measurement={measurement} />
+          </Box>
         </Stack>
       </CardContent>
     </Card>
