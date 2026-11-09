@@ -8,7 +8,7 @@
  * - Bounded Redis timeout (fail-fast, no hang)
  *
  * Cache keys (documented):
- *   pw:fresh:{windowDays}  — Fresh ShapingResult, short TTL (60 s)
+ *   pw:fresh:{windowDays}  — Fresh ShapingResult, short TTL (2 h)
  *   pw:stale:{windowDays}  — Stale ShapingResult with cachedAt timestamp, long TTL (24 h)
  *
  * The key prefix `pw:` (Planet Watch) avoids collisions if the same Redis
@@ -53,8 +53,17 @@ export interface EventsCache {
   close(): void;
 }
 
-/** Fresh TTL: 60 seconds. Short enough for near-real-time data. */
-export const FRESH_TTL_SECONDS = 60;
+/**
+ * Fresh TTL: 2 hours (7200 seconds).
+ *
+ * EONET's upstream data changes infrequently — storms update every 6–24h,
+ * wildfires every few days, icebergs weekly. A 2-hour TTL reduces upstream
+ * API calls by 120× compared to the previous 60-second value while keeping
+ * data meaningfully fresh for the most dynamic event types.
+ *
+ * See `types.test.ts` for the full research rationale.
+ */
+export const FRESH_TTL_SECONDS = 7200;
 
 /** Stale TTL: 24 hours. Long enough to survive EONET outages. */
 export const STALE_TTL_SECONDS = 24 * 60 * 60;
