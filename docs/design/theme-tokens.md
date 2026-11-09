@@ -42,9 +42,9 @@ Design tokens for the Planet Watch dark dashboard. The MUI theme in `src/lib/the
 | `stale.banner` | `#d29922` | Stale-data banner background (at 15% opacity) + text |
 | `stale.bannerText` | `#d29922` | Banner text on the above background |
 | `ai.degraded` | `#8b949e` | AI-degraded panel border + text |
-| `psi.low` | `#3fb950` | Stress Index 0–33 |
-| `psi.medium` | `#d29922` | Stress Index 34–66 |
-| `psi.high` | `#f85149` | Stress Index 67–100 |
+| `psi.low` | `#3fb950` | Stress Index 0–33 — deferred with #18 (ADR 0006); the token is on the theme and unused |
+| `psi.medium` | `#d29922` | Stress Index 34–66 — deferred with #18 (ADR 0006); unused |
+| `psi.high` | `#f85149` | Stress Index 67–100 — deferred with #18 (ADR 0006); unused |
 
 ## Type scale
 
