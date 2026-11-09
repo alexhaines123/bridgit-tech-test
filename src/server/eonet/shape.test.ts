@@ -21,21 +21,18 @@ describe("trimGeometry", () => {
         magnitudeValue: 1.0,
         magnitudeUnit: "test",
         date: "2024-01-01T00:00:00Z",
-        type: "Point" as const,
         coordinates: [0, 0] as [number, number],
       },
       {
         magnitudeValue: 2.0,
         magnitudeUnit: "test",
         date: "2025-01-01T00:00:00Z",
-        type: "Point" as const,
         coordinates: [1, 1] as [number, number],
       },
       {
         magnitudeValue: 3.0,
         magnitudeUnit: "test",
         date: "2023-01-01T00:00:00Z",
-        type: "Point" as const,
         coordinates: [2, 2] as [number, number],
       },
     ];
@@ -55,7 +52,6 @@ describe("trimGeometry", () => {
       magnitudeValue: i,
       magnitudeUnit: "test",
       date: `2024-01-${String(i + 1).padStart(2, "0")}T00:00:00Z`,
-      type: "Point" as const,
       coordinates: [0, 0] as [number, number],
     }));
 
@@ -71,7 +67,6 @@ describe("trimGeometry", () => {
       magnitudeValue: i,
       magnitudeUnit: "test",
       date: `2024-01-${String(i + 1).padStart(2, "0")}T00:00:00Z`,
-      type: "Point" as const,
       coordinates: [0, 0] as [number, number],
     }));
 
@@ -92,20 +87,17 @@ describe("shapeEvent", () => {
       link: "https://example.com",
       closed: null,
       categories: [{ id: "wildfires", title: "Wildfires" }],
-      sources: [],
       geometry: [
         {
           magnitudeValue: 100.0,
           magnitudeUnit: "acres",
           date: "2024-01-01T00:00:00Z",
-          type: "Point",
           coordinates: [-120, 40],
         },
         {
           magnitudeValue: 200.0,
           magnitudeUnit: "acres",
           date: "2025-01-01T00:00:00Z",
-          type: "Point",
           coordinates: [-121, 41],
         },
       ],
@@ -134,13 +126,11 @@ describe("shapeEvent", () => {
       link: "https://example.com",
       closed: null,
       categories: [{ id: "earthquakes", title: "Earthquakes" }],
-      sources: [],
       geometry: [
         {
           magnitudeValue: null,
           magnitudeUnit: null,
           date: "2025-01-01T00:00:00Z",
-          type: "Point",
           coordinates: [0, 0],
         },
       ],
@@ -159,13 +149,11 @@ describe("shapeEvent", () => {
       link: "https://example.com",
       closed: "2024-12-31T00:00:00Z",
       categories: [{ id: "floods", title: "Floods" }],
-      sources: [],
       geometry: [
         {
           magnitudeValue: null,
           magnitudeUnit: null,
           date: "2024-12-30T00:00:00Z",
-          type: "Point",
           coordinates: [0, 0],
         },
       ],
@@ -184,12 +172,10 @@ describe("shapeEvent", () => {
       link: "https://example.com",
       closed: null,
       categories: [{ id: "seaLakeIce", title: "Sea and Lake Ice" }],
-      sources: [],
       geometry: Array.from({ length: 15 }, (_, i) => ({
         magnitudeValue: i,
         magnitudeUnit: "NM^2",
         date: `2024-01-${String(i + 1).padStart(2, "0")}T00:00:00Z`,
-        type: "Point" as const,
         coordinates: [0, 0] as [number, number],
       })),
     };
