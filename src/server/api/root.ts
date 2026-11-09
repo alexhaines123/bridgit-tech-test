@@ -6,6 +6,9 @@ import { shapeResponse } from "@/server/eonet/shape";
 import { eventsInputSchema } from "@/server/eonet/input";
 import { RedisEventsCache } from "@/server/cache/redis-cache";
 import { CacheUnavailableError } from "@/server/cache/errors";
+import { REGIONS } from "@/server/regions/lookup";
+import { computeAllMeasurements } from "@/server/measurements";
+import { MEASUREMENT_IDS, type MeasurementId } from "@/server/measurements/types";
 
 const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
 
@@ -41,12 +44,17 @@ const eventsOutputSchema = z.object({
       }),
       historyLength: z.number(),
       historyTrimmed: z.boolean(),
+      region: z.enum(REGIONS),
     }),
   ),
   rawSizeBytes: z.number(),
   shapedSizeBytes: z.number(),
   totalEventsBeforeFilter: z.number(),
   totalEventsAfterFilter: z.number(),
+  /** All five Measurements computed from the events on the server. */
+  measurements: z.record(z.enum(MEASUREMENT_IDS), z.any()),
+  /** The deterministic default Measurement to show until the AI picks one. */
+  defaultMeasurementId: z.enum(MEASUREMENT_IDS),
   /** True when data was served from the stale cache (upstream was down). */
   stale: z.boolean(),
   /** Age in ms of the stale data, when stale is true. */
@@ -81,6 +89,9 @@ export const appRouter = router({
    * Validates the raw EONET response at the boundary. Upstream failures
    * (5xx, timeouts, rate limits) are absorbed by the stale cache when
    * available; otherwise surfaced as typed errors with user-friendly messages.
+   *
+   * Also computes all five Measurements on the server and returns them
+   * alongside the events. The default Measurement is chosen deterministically.
    */
   events: publicProcedure
     .input(eventsInputSchema)
@@ -102,8 +113,17 @@ export const appRouter = router({
           return result;
         });
 
+        // Compute all Measurements from the shaped events
+        const measurements = computeAllMeasurements(cached.data.events);
+
+        // Determine the default Measurement deterministically:
+        // Pick the first non-empty measurement from a priority list.
+        const defaultMeasurementId = determineDefaultMeasurement(measurements);
+
         return {
           ...cached.data,
+          measurements,
+          defaultMeasurementId,
           stale: cached.stale,
           staleAgeMs: cached.staleAgeMs,
           cachedAt: cached.cachedAt,
@@ -123,5 +143,35 @@ export const appRouter = router({
       }
     }),
 });
+
+/**
+ * Determines the default Measurement to show, deterministically.
+ * Picks the first non-empty measurement from a priority list:
+ * 1. eventsByCategory (if there are events with categories)
+ * 2. eventsByRegion (if there are events with regions)
+ * 3. startedPerDay (if there are events with dates)
+ * 4. newVsOngoing (always has data, even if zeros)
+ * 5. biggestInCategory (fallback)
+ */
+function determineDefaultMeasurement(
+  measurements: ReturnType<typeof computeAllMeasurements>,
+): MeasurementId {
+  if (measurements.eventsByCategory.data.length > 0) {
+    return "eventsByCategory";
+  }
+  if (measurements.eventsByRegion.data.length > 0) {
+    return "eventsByRegion";
+  }
+  if (measurements.startedPerDay.data.length > 0) {
+    return "startedPerDay";
+  }
+  if (
+    measurements.newVsOngoing.data.newCount > 0 ||
+    measurements.newVsOngoing.data.ongoingCount > 0
+  ) {
+    return "newVsOngoing";
+  }
+  return "biggestInCategory";
+}
 
 export type AppRouter = typeof appRouter;
