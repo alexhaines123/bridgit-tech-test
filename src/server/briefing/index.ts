@@ -8,6 +8,10 @@
  * - Output is validated against a Zod schema before use
  * - Results are cached by input hash; the same data never costs a second call
  * - Graceful degradation: AI failures surface as typed errors, not crashes
+ *
+ * Per ticket #21: the AI also chooses which Measurement to display, with a
+ * caption and reason. The choice is validated against the fixed Measurement
+ * list and checked for applicability to the data.
  */
 
 export { BriefingClient, type BriefingClientConfig, type BriefingResult } from "./client";

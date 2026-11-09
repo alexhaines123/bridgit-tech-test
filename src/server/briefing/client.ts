@@ -6,6 +6,12 @@
  * Zod schema, retries once on invalid output or failure, and caches results
  * by a hash of the trimmed input. Token usage is logged for cost awareness;
  * no secrets appear in logs.
+ *
+ * Per ticket #21: the AI also chooses which Measurement to display, with a
+ * caption and reason. The choice is validated against the fixed Measurement
+ * list and checked for applicability to the data. If the choice is invalid
+ * or inapplicable, it is rejected and the client retries once before falling
+ * back to a typed error.
  */
 
 import { createAnthropic } from "@ai-sdk/anthropic";
@@ -14,6 +20,8 @@ import { BriefingError } from "./errors";
 import { BriefingCache } from "./cache";
 import { briefingOutputSchema, type BriefingOutput } from "./schema";
 import type { BriefingPayload } from "./payload";
+import { isMeasurementApplicable } from "@/server/measurements/applicable";
+import { MEASUREMENT_IDS, type MeasurementSummary } from "@/server/measurements/types";
 
 /**
  * Configuration for the Briefing client.
@@ -33,10 +41,17 @@ export interface BriefingClientConfig {
 
 /**
  * The result of a successful Briefing generation.
+ * Includes the summary, the chosen Measurement, a caption, and a reason.
  */
 export interface BriefingResult {
   /** The validated AI-generated summary. */
   summary: string;
+  /** The Measurement ID the AI chose to display. */
+  chosenMeasurementId: string;
+  /** A short caption for the chart. */
+  caption: string;
+  /** A short reason why this Measurement was chosen. */
+  reason: string;
   /** Token usage for cost awareness. */
   usage: {
     inputTokens: number;
@@ -57,20 +72,35 @@ type ResolvedConfig = BriefingClientConfig & typeof DEFAULT_CONFIG;
  */
 const BRIEFING_SYSTEM_PROMPT = `You are writing a student-friendly briefing for a dashboard about natural events from NASA's EONET. Your audience is a student who wants to understand what the chart shows.
 
-Write ONE plain-English paragraph that reads the Measurement data provided. The paragraph must:
+Your tasks:
+1. Choose ONE Measurement from the fixed list provided below that is most interesting for the data
+2. Write a briefing summary about that chosen Measurement
+3. Write a short caption for the chart
+4. Write a short reason why you chose that Measurement
+
+The briefing summary must:
 - Be 2 to 4 sentences long
 - Be at most 500 characters
-- Describe the Measurement named "focusMeasurement" below — the one the chart currently displays
-- Reference only the numbers provided in the payload
+- Describe the Measurement you chose — reference only the numbers provided in the payload
 - Use a friendly, educational tone
 
+The caption must:
+- Be at most 120 characters
+- Be a short, descriptive title for the chart
+
+The reason must:
+- Be at most 200 characters
+- Explain why this Measurement is interesting or important for the current data
+
 Do NOT:
+- Choose a Measurement ID that is not in the fixed list
 - Make up numbers not in the payload
 - Discuss events not in the data
 - Go off-topic or refuse the task
 - Use markdown, lists, or special formatting
 
-Output ONLY a JSON object with this exact shape: {"summary": "your paragraph here"}
+Output ONLY a JSON object with this exact shape:
+{"summary": "your paragraph here", "chosenMeasurementId": "the ID you chose", "caption": "short chart title", "reason": "why you chose it"}
 Nothing else before or after the JSON.`;
 
 /**
@@ -89,25 +119,38 @@ export class BriefingClient {
    * Generates a Briefing summary from the server-computed payload.
    *
    * Checks the cache first. On a cache miss, calls Claude with the payload,
-   * validates the output, and retries once on invalid output or failure.
-   * Returns a validated summary with token usage, or throws a typed error.
+   * validates the output (including the chosen Measurement and its applicability),
+   * and retries once on invalid output or failure. Returns a validated result
+   * with token usage, or throws a typed error.
    */
-  async generateBriefing(payload: BriefingPayload): Promise<BriefingResult> {
+  async generateBriefing(
+    payload: BriefingPayload,
+    measurements: MeasurementSummary,
+  ): Promise<BriefingResult> {
     // Check cache first
     const cached = this.cache.get(payload);
     if (cached) {
-      return { summary: cached.summary, usage: { inputTokens: 0, outputTokens: 0 } };
+      return {
+        summary: cached.summary,
+        chosenMeasurementId: cached.chosenMeasurementId,
+        caption: cached.caption,
+        reason: cached.reason,
+        usage: { inputTokens: 0, outputTokens: 0 },
+      };
     }
 
     // Try to generate, with one retry on any failure
     let lastError: unknown;
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        const result = await this.callAI(payload);
+        const result = await this.callAI(payload, measurements);
         // Cache the successful result
         this.cache.set(payload, result.output, this.config.cacheTtlMs);
         return {
           summary: result.output.summary,
+          chosenMeasurementId: result.output.chosenMeasurementId,
+          caption: result.output.caption,
+          reason: result.output.reason,
           usage: result.usage,
         };
       } catch (error) {
@@ -140,7 +183,10 @@ export class BriefingClient {
   /**
    * Makes a single AI call and validates the output.
    */
-  private async callAI(payload: BriefingPayload): Promise<{
+  private async callAI(
+    payload: BriefingPayload,
+    measurements: MeasurementSummary,
+  ): Promise<{
     output: BriefingOutput;
     usage: { inputTokens: number; outputTokens: number };
   }> {
@@ -193,13 +239,22 @@ export class BriefingClient {
         );
       }
 
+      // Check if the chosen Measurement is applicable to the data
+      const chosenId = validation.data.chosenMeasurementId;
+      if (!isMeasurementApplicable(chosenId, measurements)) {
+        throw new BriefingError(
+          "ai-invalid-output",
+          `AI chose ${chosenId} but it is not applicable to the current data`,
+        );
+      }
+
       // Log token usage (no secrets)
       const usage = {
         inputTokens: result.usage?.inputTokens ?? 0,
         outputTokens: result.usage?.outputTokens ?? 0,
       };
       console.log(
-        `[Briefing AI] tokens: ${usage.inputTokens} in, ${usage.outputTokens} out, model: ${this.config.modelId}`,
+        `[Briefing AI] tokens: ${usage.inputTokens} in, ${usage.outputTokens} out, model: ${this.config.modelId}, chose: ${chosenId}`,
       );
 
       return { output: validation.data, usage };
@@ -231,13 +286,10 @@ export class BriefingClient {
 
 /**
  * Builds the user message from the payload.
- * Formats the measurements as readable data for the AI and names the
- * Measurement it should focus on (the one the chart currently displays).
+ * Formats the measurements as readable data for the AI and lists the
+ * available Measurement IDs it can choose from.
  */
 function buildUserMessage(payload: BriefingPayload): string {
-  // Identify the title of the Measurement the AI should focus on
-  const focusMeasurement = payload.measurements[payload.defaultMeasurementId];
-
   const lines: string[] = [
     `Write a student-friendly briefing for the following data:`,
     ``,
@@ -245,7 +297,8 @@ function buildUserMessage(payload: BriefingPayload): string {
     `Total Events: ${payload.totalEventCount}`,
     `Data is ${payload.stale ? "stale (cached from an earlier fetch)" : "fresh"}`,
     ``,
-    `Focus Measurement (the one the chart displays): "${focusMeasurement.title}"`,
+    `Choose ONE Measurement from this fixed list:`,
+    ...MEASUREMENT_IDS.map((id) => `- ${id}`),
     ``,
     `All Measurements:`,
     JSON.stringify(payload.measurements, null, 2),
