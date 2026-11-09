@@ -11,7 +11,7 @@ import {
 } from "@mui/material";
 import { trpc } from "@/lib/trpc/react";
 import { WindowSelector } from "@/components/window-selector";
-import { EventList } from "@/components/event-list";
+import { RecentEventsCompact } from "@/components/recent-events-compact";
 import { CategoryFilter } from "@/components/category-filter";
 import { MeasurementChart } from "@/components/measurement-chart";
 import { BriefingCard } from "@/components/briefing-card";
@@ -22,7 +22,7 @@ import {
   getCategoriesFromEvents,
   getCategoryTitlesFromEvents,
 } from "@/lib/filters";
-import type { Measurement, MeasurementId, MeasurementSummary } from "@/server/measurements/types";
+import type { MeasurementSummary } from "@/server/measurements/types";
 
 // Dynamic import for the map to avoid SSR issues with WebGL
 const EventMap = dynamic(() => import("@/components/event-map"), {
@@ -31,7 +31,7 @@ const EventMap = dynamic(() => import("@/components/event-map"), {
       sx={{
         justifyContent: "center",
         alignItems: "center",
-        height: 500,
+        height: 400,
         bgcolor: "background.paper",
         borderRadius: 1,
       }}
@@ -48,7 +48,6 @@ export default function HomePage() {
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   const events = trpc.events.useQuery({ windowDays });
-  const briefing = trpc.briefing.useQuery({ windowDays });
 
   // Derive available categories from all events
   const allCategories = useMemo(
@@ -70,39 +69,12 @@ export default function HomePage() {
     [events.data, selectedCategories],
   );
 
-  // The current Measurement to chart:
-  // - If the briefing succeeded, use the AI-chosen Measurement
-  // - Otherwise, fall back to the deterministic default
-  const currentMeasurement = useMemo<Measurement | null>(() => {
+  // Map the startedPerDay Measurement for the sidebar Activity chart
+  const startedPerDayMeasurement = useMemo(() => {
     if (!events.data) return null;
     const measurements = events.data.measurements as MeasurementSummary;
-
-    // Use the AI-chosen Measurement if the briefing succeeded
-    if (briefing.isSuccess && briefing.data.chosenMeasurementId) {
-      const chosenId = briefing.data.chosenMeasurementId as MeasurementId;
-      return measurements[chosenId];
-    }
-
-    // Fall back to the deterministic default
-    const defaultId = events.data.defaultMeasurementId as MeasurementId;
-    return measurements[defaultId];
-  }, [events.data, briefing.isSuccess, briefing.data]);
-
-  // Chart caption: use the AI's caption if available, otherwise a default
-  const chartCaption = useMemo<string>(() => {
-    if (briefing.isSuccess && briefing.data.caption) {
-      return briefing.data.caption;
-    }
-    return "Showing the default Measurement.";
-  }, [briefing.isSuccess, briefing.data]);
-
-  // Chart reason: the AI's reason, shown below the caption
-  const chartReason = useMemo<string | null>(() => {
-    if (briefing.isSuccess && briefing.data.reason) {
-      return briefing.data.reason;
-    }
-    return null;
-  }, [briefing.isSuccess, briefing.data]);
+    return measurements.startedPerDay ?? null;
+  }, [events.data]);
 
   const handleRetry = () => {
     events.refetch();
@@ -113,7 +85,8 @@ export default function HomePage() {
   };
 
   return (
-    <Stack component="main" spacing={3} sx={{ p: 4, maxWidth: 1400, mx: "auto" }}>
+    <Stack component="main" sx={{ p: 4, maxWidth: 1400, mx: "auto" }} spacing={3}>
+      {/* Header */}
       <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
         <Stack spacing={0.5}>
           <Typography variant="h3">Planet Watch</Typography>
@@ -144,51 +117,96 @@ export default function HomePage() {
       )}
 
       {events.isSuccess && (
-        <>
-          {/* Category filter */}
-          {allCategories.length > 0 && (
-            <CategoryFilter
-              categories={allCategories}
-              categoryTitles={categoryTitles}
-              selected={selectedCategories}
-              onChange={setSelectedCategories}
-            />
-          )}
-
-          {/* Map */}
-          <Box sx={{ borderRadius: 1, overflow: "hidden", border: "1px solid", borderColor: "divider" }}>
-            <EventMap
-              events={filteredEvents}
-              selectedEventId={selectedEventId}
-              onSelectEvent={handleSelectEvent}
-            />
+        /*
+         * Responsive grid layout.
+         * Desktop (md+): 2-column grid — Map + Recent Events in column 1,
+         *   CategoryFilter + BriefingCard + MeasurementChart in column 2.
+         * Mobile (xs): single column, items ordered: Map → CategoryFilter →
+         *   BriefingCard → MeasurementChart → RecentEventsCompact.
+         */
+        <Box
+          sx={{
+            display: "grid",
+            gap: 3,
+            gridTemplateColumns: { xs: "1fr", md: "2fr 1fr" },
+          }}
+        >
+          {/* Map — column 1 on desktop, order 1 on mobile */}
+          <Box
+            sx={{
+              gridColumn: { xs: "1", md: "1" },
+              order: { xs: 1, md: 1 },
+            }}
+          >
+            <Box
+              sx={{
+                borderRadius: 1,
+                overflow: "hidden",
+                border: "1px solid",
+                borderColor: "divider",
+                height: 400,
+              }}
+            >
+              <EventMap
+                events={filteredEvents}
+                selectedEventId={selectedEventId}
+                onSelectEvent={handleSelectEvent}
+              />
+            </Box>
           </Box>
 
-          {/* Measurement chart */}
-          {currentMeasurement && (
-            <Stack spacing={0.5}>
-              <MeasurementChart
-                measurement={currentMeasurement}
-                caption={chartCaption}
+          {/* Category filter — column 2 on desktop, order 2 on mobile */}
+          {allCategories.length > 0 && (
+            <Box
+              sx={{
+                gridColumn: { xs: "1", md: "2" },
+                order: { xs: 2, md: 2 },
+              }}
+            >
+              <CategoryFilter
+                categories={allCategories}
+                categoryTitles={categoryTitles}
+                selected={selectedCategories}
+                onChange={setSelectedCategories}
               />
-              {chartReason && (
-                <Typography variant="caption" color="text.secondary" sx={{ px: 2, pb: 1 }}>
-                  Why this chart: {chartReason}
-                </Typography>
-              )}
-            </Stack>
+            </Box>
           )}
 
-          {/* AI Briefing */}
-          <BriefingCard windowDays={windowDays} />
+          {/* AI Briefing — column 2 on desktop, order 3 on mobile */}
+          <Box
+            sx={{
+              gridColumn: { xs: "1", md: "2" },
+              order: { xs: 3, md: 3 },
+            }}
+          >
+            <BriefingCard windowDays={windowDays} />
+          </Box>
 
-          {/* Event list */}
-          <EventList
-            events={filteredEvents}
-            selectedEventId={selectedEventId}
-            onSelectEvent={handleSelectEvent}
-          />
-        </>
+          {/* Event Activity chart (startedPerDay) — column 2 on desktop, order 4 on mobile */}
+          {startedPerDayMeasurement && (
+            <Box
+              sx={{
+                gridColumn: { xs: "1", md: "2" },
+                order: { xs: 4, md: 4 },
+              }}
+            >
+              <MeasurementChart
+                measurement={startedPerDayMeasurement}
+                caption="Events started per day in the current Window."
+              />
+            </Box>
+          )}
+
+          {/* Recent Events compact list — column 1 on desktop, order 5 on mobile (last) */}
+          <Box
+            sx={{
+              gridColumn: { xs: "1", md: "1" },
+              order: { xs: 5, md: 5 },
+            }}
+          >
+            <RecentEventsCompact events={filteredEvents} maxItems={5} />
+          </Box>
+        </Box>
       )}
     </Stack>
   );
