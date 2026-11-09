@@ -8,7 +8,7 @@ import type { ShapedEvent } from "@/server/eonet/types";
 import { categoryColors } from "@/lib/theme";
 import { eventsToGeoJSON } from "./map-utils";
 
-const MAP_STYLE = process.env.NEXT_PUBLIC_MAP_STYLE || "https://demotiles.maplibre.org/style.json";
+const MAP_STYLE = process.env.NEXT_PUBLIC_MAP_STYLE || "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 
 interface EventMapInnerProps {
   events: ShapedEvent[];
@@ -62,13 +62,14 @@ export default function EventMapInner({
       <Map
         ref={mapRef}
         initialViewState={{
-          longitude: 0,
-          latitude: 20,
-          zoom: 1.5,
+          longitude: 30,
+          latitude: 15,
+          zoom: 1,
         }}
         style={{ width: "100%", height: "100%" }}
         mapStyle={MAP_STYLE}
         onClick={handleMapClick}
+        workerUrl="/maplibre-gl-worker.mjs"
       >
         <NavigationControl position="top-right" />
 
@@ -218,6 +219,9 @@ function EventDetailsPopup({ event }: { event: ShapedEvent }) {
         />
         <Typography variant="caption" color="text.secondary">
           {date}
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          {event.region}
         </Typography>
       </Stack>
       {event.latest.magnitude && (
