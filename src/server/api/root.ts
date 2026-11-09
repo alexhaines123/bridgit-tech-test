@@ -165,7 +165,6 @@ export const appRouter = router({
     .output(
       z.object({
         summary: z.string(),
-        measurementId: z.enum(MEASUREMENT_IDS),
         measurementTitle: z.string(),
       }),
     )
@@ -187,13 +186,13 @@ export const appRouter = router({
           windowDays: input.windowDays as WindowDays,
           totalEventCount: cached.data.events.length,
           stale: cached.stale,
+          defaultMeasurementId,
         });
 
         const result = await briefingClient.generateBriefing(payload);
 
         return {
           summary: result.summary,
-          measurementId: defaultMeasurementId,
           measurementTitle: defaultMeasurement.title,
         };
       } catch (error) {

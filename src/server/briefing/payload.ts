@@ -9,7 +9,7 @@
  * The payload has a size cap to keep token costs bounded.
  */
 
-import type { MeasurementSummary } from "@/server/measurements/types";
+import type { MeasurementSummary, MeasurementId } from "@/server/measurements/types";
 import type { WindowDays } from "@/server/eonet/types";
 
 /**
@@ -26,6 +26,8 @@ export interface BuildBriefingPayloadInput {
   windowDays: WindowDays;
   totalEventCount: number;
   stale: boolean;
+  /** The Measurement the chart currently displays. Tells the AI which to describe. */
+  defaultMeasurementId: MeasurementId;
 }
 
 /**
@@ -37,6 +39,8 @@ export interface BriefingPayload {
   windowDays: WindowDays;
   totalEventCount: number;
   stale: boolean;
+  /** The Measurement the chart currently displays. The AI reads this one. */
+  defaultMeasurementId: MeasurementId;
 }
 
 /**
@@ -91,6 +95,7 @@ export function buildBriefingPayload(input: BuildBriefingPayloadInput): Briefing
     windowDays: input.windowDays,
     totalEventCount: input.totalEventCount,
     stale: input.stale,
+    defaultMeasurementId: input.defaultMeasurementId,
   };
 
   // Enforce the size cap by trimming arrays if necessary
@@ -155,7 +160,8 @@ function enforceSizeCap(payload: BriefingPayload): BriefingPayload {
     trimmableArrays.sort((a, b) => b.getLength() - a.getLength());
     const largest = trimmableArrays[0];
     if (largest.getLength() === 0) {
-      // All arrays empty and still over cap — nothing more we can do
+      // All arrays empty and still over cap — truncate long strings
+      truncateLongStrings(result);
       return result;
     }
 
@@ -164,4 +170,27 @@ function enforceSizeCap(payload: BriefingPayload): BriefingPayload {
   }
 
   return result;
+}
+
+/**
+ * Truncates long strings in the payload to fit the size cap.
+ * Category titles and region names longer than 50 chars are trimmed.
+ */
+function truncateLongStrings(result: BriefingPayload): void {
+  const MAX_STRING_LENGTH = 50;
+
+  for (const entry of result.measurements.eventsByCategory.data) {
+    if (entry.categoryTitle.length > MAX_STRING_LENGTH) {
+      entry.categoryTitle = entry.categoryTitle.slice(0, MAX_STRING_LENGTH) + "…";
+    }
+  }
+  for (const entry of result.measurements.eventsByRegion.data) {
+    if (entry.region.length > MAX_STRING_LENGTH) {
+      entry.region = entry.region.slice(0, MAX_STRING_LENGTH) + "…";
+    }
+  }
+  const biggest = result.measurements.biggestInCategory.data;
+  if (biggest.categoryTitle.length > MAX_STRING_LENGTH) {
+    biggest.categoryTitle = biggest.categoryTitle.slice(0, MAX_STRING_LENGTH) + "…";
+  }
 }

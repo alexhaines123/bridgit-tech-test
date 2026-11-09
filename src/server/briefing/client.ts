@@ -60,7 +60,7 @@ const BRIEFING_SYSTEM_PROMPT = `You are writing a student-friendly briefing for 
 Write ONE plain-English paragraph that reads the Measurement data provided. The paragraph must:
 - Be 2 to 4 sentences long
 - Be at most 500 characters
-- Describe what the data shows in simple terms
+- Describe the Measurement named "focusMeasurement" below — the one the chart currently displays
 - Reference only the numbers provided in the payload
 - Use a friendly, educational tone
 
@@ -99,7 +99,7 @@ export class BriefingClient {
       return { summary: cached.summary, usage: { inputTokens: 0, outputTokens: 0 } };
     }
 
-    // Try to generate, with one retry on invalid output
+    // Try to generate, with one retry on any failure
     let lastError: unknown;
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
@@ -113,18 +113,12 @@ export class BriefingClient {
       } catch (error) {
         lastError = error;
 
-        // Don't retry on rate limits or timeouts — those are transient infrastructure issues
-        if (error instanceof BriefingError) {
-          if (error.code === "ai-rate-limited" || error.code === "ai-timeout") {
-            throw error;
-          }
-          // Retry on ai-invalid-output and ai-unavailable
-          if (attempt < 1) {
-            continue;
-          }
+        // Re-throw BriefingError on the last attempt
+        if (error instanceof BriefingError && attempt >= 1) {
+          throw error;
         }
 
-        // Unknown error — retry once
+        // Retry on any failure (invalid output, rate limit, timeout, unavailable)
         if (attempt < 1) {
           continue;
         }
@@ -237,9 +231,13 @@ export class BriefingClient {
 
 /**
  * Builds the user message from the payload.
- * Formats the measurements as readable data for the AI.
+ * Formats the measurements as readable data for the AI and names the
+ * Measurement it should focus on (the one the chart currently displays).
  */
 function buildUserMessage(payload: BriefingPayload): string {
+  // Identify the title of the Measurement the AI should focus on
+  const focusMeasurement = payload.measurements[payload.defaultMeasurementId];
+
   const lines: string[] = [
     `Write a student-friendly briefing for the following data:`,
     ``,
@@ -247,7 +245,9 @@ function buildUserMessage(payload: BriefingPayload): string {
     `Total Events: ${payload.totalEventCount}`,
     `Data is ${payload.stale ? "stale (cached from an earlier fetch)" : "fresh"}`,
     ``,
-    `Measurements:`,
+    `Focus Measurement (the one the chart displays): "${focusMeasurement.title}"`,
+    ``,
+    `All Measurements:`,
     JSON.stringify(payload.measurements, null, 2),
   ];
   return lines.join("\n");
