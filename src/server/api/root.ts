@@ -157,6 +157,11 @@ export const appRouter = router({
    * output against a Zod schema. Results are cached by input hash so the
    * same data never costs a second AI call.
    *
+   * Per ticket #21: the AI also chooses which Measurement to display, with a
+   * caption and reason. The choice is validated against the fixed Measurement
+   * list and checked for applicability. If the AI fails or the choice is
+   * invalid/inapplicable, the chart keeps the deterministic default.
+   *
    * This is a soft dependency: AI failures surface as typed errors with
    * user-friendly messages, so the map, list and chart keep working.
    */
@@ -165,6 +170,9 @@ export const appRouter = router({
     .output(
       z.object({
         summary: z.string(),
+        chosenMeasurementId: z.enum(MEASUREMENT_IDS),
+        caption: z.string(),
+        reason: z.string(),
         measurementTitle: z.string(),
       }),
     )
@@ -178,7 +186,6 @@ export const appRouter = router({
 
         const measurements = computeAllMeasurements(cached.data.events);
         const defaultMeasurementId = determineDefaultMeasurement(measurements);
-        const defaultMeasurement = measurements[defaultMeasurementId];
 
         // Build the payload and call the AI
         const payload = buildBriefingPayload({
@@ -189,11 +196,16 @@ export const appRouter = router({
           defaultMeasurementId,
         });
 
-        const result = await briefingClient.generateBriefing(payload);
+        const result = await briefingClient.generateBriefing(payload, measurements);
+
+        const chosenMeasurement = measurements[result.chosenMeasurementId as MeasurementId];
 
         return {
           summary: result.summary,
-          measurementTitle: defaultMeasurement.title,
+          chosenMeasurementId: result.chosenMeasurementId as MeasurementId,
+          caption: result.caption,
+          reason: result.reason,
+          measurementTitle: chosenMeasurement.title,
         };
       } catch (error) {
         if (error instanceof BriefingError) {
