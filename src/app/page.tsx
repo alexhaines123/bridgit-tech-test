@@ -26,9 +26,8 @@ import type { Measurement, MeasurementId, MeasurementSummary } from "@/server/me
 // Dynamic import for the map to avoid SSR issues with WebGL
 const EventMap = dynamic(() => import("@/components/event-map"), {
   loading: () => (
-    <Box
+    <Stack
       sx={{
-        display: "flex",
         justifyContent: "center",
         alignItems: "center",
         height: 500,
@@ -37,7 +36,7 @@ const EventMap = dynamic(() => import("@/components/event-map"), {
       }}
     >
       <CircularProgress />
-    </Box>
+    </Stack>
   ),
   ssr: false,
 });
@@ -98,9 +97,9 @@ export default function HomePage() {
       </Stack>
 
       {events.isPending && (
-        <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+        <Stack sx={{ justifyContent: "center", py: 8 }}>
           <CircularProgress />
-        </Box>
+        </Stack>
       )}
 
       {events.isError && (
