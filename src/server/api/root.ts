@@ -9,6 +9,7 @@ import { CacheUnavailableError } from "@/server/cache/errors";
 import { REGIONS } from "@/server/regions/lookup";
 import { computeAllMeasurements } from "@/server/measurements";
 import { MEASUREMENT_IDS, type MeasurementId } from "@/server/measurements/types";
+import { measurementsSchema } from "@/server/measurements/schema";
 
 const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
 
@@ -45,6 +46,7 @@ const eventsOutputSchema = z.object({
       historyLength: z.number(),
       historyTrimmed: z.boolean(),
       region: z.enum(REGIONS),
+      earliestDate: z.string(),
     }),
   ),
   rawSizeBytes: z.number(),
@@ -52,7 +54,7 @@ const eventsOutputSchema = z.object({
   totalEventsBeforeFilter: z.number(),
   totalEventsAfterFilter: z.number(),
   /** All five Measurements computed from the events on the server. */
-  measurements: z.record(z.enum(MEASUREMENT_IDS), z.any()),
+  measurements: measurementsSchema,
   /** The deterministic default Measurement to show until the AI picks one. */
   defaultMeasurementId: z.enum(MEASUREMENT_IDS),
   /** True when data was served from the stale cache (upstream was down). */

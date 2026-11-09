@@ -6,8 +6,6 @@
  * human-readable title, and typed data.
  */
 
-import type { ShapedEvent } from "@/server/eonet/types";
-
 /**
  * The five supported Measurement IDs. These are the only values the AI
  * is allowed to choose from (validated in ticket #21).
@@ -118,8 +116,3 @@ export interface MeasurementSummary {
   newVsOngoing: Extract<Measurement, { id: "newVsOngoing" }>;
   startedPerDay: Extract<Measurement, { id: "startedPerDay" }>;
 }
-
-/**
- * Re-export for convenience.
- */
-export type { ShapedEvent };

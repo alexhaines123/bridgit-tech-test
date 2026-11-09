@@ -6,7 +6,6 @@ import {
   computeNewVsOngoing,
   computeStartedPerDay,
   computeAllMeasurements,
-  getMeasurement,
 } from "./compute";
 import type { ShapedEvent } from "@/server/eonet/types";
 
@@ -27,6 +26,7 @@ const makeEvent = (
   historyLength: 1,
   historyTrimmed: false,
   region: "Africa",
+  earliestDate: "2026-11-01T00:00:00Z",
   ...overrides,
 });
 
@@ -325,31 +325,19 @@ describe("computeStartedPerDay", () => {
     expect(computeStartedPerDay([])).toEqual([]);
   });
 
-  it("groups events by date", () => {
+  it("groups events by earliest date", () => {
     const events = [
       makeEvent({
         id: "1",
-        latest: {
-          coordinates: [0, 0],
-          date: "2026-11-01T10:00:00Z",
-          magnitude: null,
-        },
+        earliestDate: "2026-11-01T10:00:00Z",
       }),
       makeEvent({
         id: "2",
-        latest: {
-          coordinates: [0, 0],
-          date: "2026-11-01T15:00:00Z",
-          magnitude: null,
-        },
+        earliestDate: "2026-11-01T15:00:00Z",
       }),
       makeEvent({
         id: "3",
-        latest: {
-          coordinates: [0, 0],
-          date: "2026-11-02T08:00:00Z",
-          magnitude: null,
-        },
+        earliestDate: "2026-11-02T08:00:00Z",
       }),
     ];
     const result = computeStartedPerDay(events);
@@ -359,23 +347,35 @@ describe("computeStartedPerDay", () => {
     expect(result[1]).toEqual({ date: "2026-11-02", count: 1 });
   });
 
+  it("uses earliestDate, not latest.date, so an event started days ago counts on its start day", () => {
+    // An event that started on Nov 1 but was last observed on Nov 5 should
+    // count under Nov 1, not Nov 5.
+    const events = [
+      makeEvent({
+        id: "1",
+        earliestDate: "2026-11-01T00:00:00Z",
+        latest: {
+          coordinates: [0, 0],
+          date: "2026-11-05T00:00:00Z",
+          magnitude: null,
+        },
+      }),
+    ];
+    const result = computeStartedPerDay(events);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual({ date: "2026-11-01", count: 1 });
+  });
+
   it("sorts by date ascending", () => {
     const events = [
       makeEvent({
         id: "1",
-        latest: {
-          coordinates: [0, 0],
-          date: "2026-11-03T00:00:00Z",
-          magnitude: null,
-        },
+        earliestDate: "2026-11-03T00:00:00Z",
       }),
       makeEvent({
         id: "2",
-        latest: {
-          coordinates: [0, 0],
-          date: "2026-11-01T00:00:00Z",
-          magnitude: null,
-        },
+        earliestDate: "2026-11-01T00:00:00Z",
       }),
     ];
     const result = computeStartedPerDay(events);
@@ -388,11 +388,7 @@ describe("computeStartedPerDay", () => {
     const events = [
       makeEvent({
         id: "1",
-        latest: {
-          coordinates: [0, 0],
-          date: "2026-11-05T12:00:00Z",
-          magnitude: null,
-        },
+        earliestDate: "2026-11-05T12:00:00Z",
       }),
     ];
     const result = computeStartedPerDay(events);
@@ -429,32 +425,5 @@ describe("computeAllMeasurements", () => {
     expect(summary.biggestInCategory.data.magnitudeValue).toBeNull();
     expect(summary.newVsOngoing.data).toEqual({ newCount: 0, ongoingCount: 0 });
     expect(summary.startedPerDay.data).toEqual([]);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// getMeasurement
-// ---------------------------------------------------------------------------
-
-describe("getMeasurement", () => {
-  it("returns a specific measurement by ID", () => {
-    const events = [makeEvent({ id: "1", region: "Europe" })];
-
-    const result = getMeasurement(events, "eventsByRegion");
-    expect(result.id).toBe("eventsByRegion");
-    expect(result.title).toBe("Events by Region");
-  });
-
-  it("returns the same data as computeAllMeasurements for each ID", () => {
-    const events = [
-      makeEvent({ id: "1", categoryId: "wildfires", region: "Europe", closed: false, historyLength: 1 }),
-      makeEvent({ id: "2", categoryId: "earthquakes", region: "Asia", closed: false, historyLength: 5 }),
-    ];
-    const summary = computeAllMeasurements(events);
-
-    for (const id of ["eventsByCategory", "eventsByRegion", "biggestInCategory", "newVsOngoing", "startedPerDay"] as const) {
-      const result = getMeasurement(events, id);
-      expect(result).toEqual(summary[id]);
-    }
   });
 });
