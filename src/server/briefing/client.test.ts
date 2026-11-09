@@ -4,6 +4,8 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { BriefingClient } from "./client";
 import { BriefingError } from "./errors";
 import type { BriefingPayload } from "./payload";
+import type { MeasurementSummary } from "@/server/measurements/types";
+import { createFullMeasurementSummary } from "../../../test/fixtures/measurements";
 
 // MSW server for HTTP-level mocking
 const server = setupServer();
@@ -53,12 +55,15 @@ const mockPayload: BriefingPayload = {
   defaultMeasurementId: "eventsByCategory",
 };
 
+/** Full Measurement summary matching the mock payload. */
+const mockMeasurements: MeasurementSummary = createFullMeasurementSummary();
+
 describe("BriefingClient", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("returns a valid summary on a successful response", async () => {
+  it("returns a valid result with chosen Measurement on success", async () => {
     server.use(
       http.post(`${ANTHROPIC_BASE_URL}/v1/messages`, () => {
         return HttpResponse.json({
@@ -68,7 +73,53 @@ describe("BriefingClient", () => {
           content: [
             {
               type: "text",
-              text: '{"summary":"Wildfires dominated the event count this month. North America saw the most activity."}',
+              text: JSON.stringify({
+                summary:
+                  "Wildfires dominated the event count this month. North America saw the most activity.",
+                chosenMeasurementId: "eventsByCategory",
+                caption: "Events grouped by Category",
+                reason: "Wildfires are the most common Category this window.",
+              }),
+            },
+          ],
+          usage: { input_tokens: 100, output_tokens: 40 },
+        });
+      }),
+    );
+
+    const client = new BriefingClient({
+      apiKey: "test-key",
+      modelId: "claude-test",
+      baseUrl: ANTHROPIC_BASE_URL,
+    });
+
+    const result = await client.generateBriefing(mockPayload, mockMeasurements);
+
+    expect(result.summary).toContain("Wildfires");
+    expect(result.chosenMeasurementId).toBe("eventsByCategory");
+    expect(result.caption).toBe("Events grouped by Category");
+    expect(result.reason).toContain("most common");
+    expect(result.usage).toBeDefined();
+  });
+
+  it("caches results by input hash", async () => {
+    let callCount = 0;
+    server.use(
+      http.post(`${ANTHROPIC_BASE_URL}/v1/messages`, () => {
+        callCount++;
+        return HttpResponse.json({
+          id: "msg_test",
+          type: "message",
+          role: "assistant",
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                summary: "Wildfires dominated the count. Storms followed.",
+                chosenMeasurementId: "eventsByCategory",
+                caption: "Events by Category",
+                reason: "Wildfires are the most common.",
+              }),
             },
           ],
           usage: { input_tokens: 100, output_tokens: 20 },
@@ -82,10 +133,166 @@ describe("BriefingClient", () => {
       baseUrl: ANTHROPIC_BASE_URL,
     });
 
-    const result = await client.generateBriefing(mockPayload);
+    // First call
+    const result1 = await client.generateBriefing(mockPayload, mockMeasurements);
+    expect(callCount).toBe(1);
 
-    expect(result.summary).toContain("Wildfires");
-    expect(result.usage).toBeDefined();
+    // Second call with same input should hit cache
+    const result2 = await client.generateBriefing(mockPayload, mockMeasurements);
+    expect(callCount).toBe(1); // No additional call
+    expect(result2.summary).toBe(result1.summary);
+    expect(result2.chosenMeasurementId).toBe(result1.chosenMeasurementId);
+  });
+
+  it("accepts each valid Measurement ID", async () => {
+    const ids = [
+      "eventsByCategory",
+      "eventsByRegion",
+      "biggestInCategory",
+      "newVsOngoing",
+      "startedPerDay",
+    ] as const;
+
+    for (const id of ids) {
+      server.use(
+        http.post(`${ANTHROPIC_BASE_URL}/v1/messages`, () => {
+          return HttpResponse.json({
+            id: "msg_test",
+            type: "message",
+            role: "assistant",
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify({
+                  summary: "Wildfires dominated. Storms followed.",
+                  chosenMeasurementId: id,
+                  caption: "Test caption",
+                  reason: "Test reason.",
+                }),
+              },
+            ],
+            usage: { input_tokens: 100, output_tokens: 20 },
+          });
+        }),
+      );
+
+      const client = new BriefingClient({
+        apiKey: "test-key",
+        modelId: "claude-test",
+        baseUrl: ANTHROPIC_BASE_URL,
+      });
+
+      const result = await client.generateBriefing(mockPayload, mockMeasurements);
+      expect(result.chosenMeasurementId).toBe(id);
+    }
+  });
+
+  it("rejects an unknown Measurement ID and retries once", async () => {
+    let callCount = 0;
+    server.use(
+      http.post(`${ANTHROPIC_BASE_URL}/v1/messages`, () => {
+        callCount++;
+        return HttpResponse.json({
+          id: "msg_test",
+          type: "message",
+          role: "assistant",
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                summary: "Wildfires dominated. Storms followed.",
+                chosenMeasurementId: "unknownMeasurement",
+                caption: "Test caption",
+                reason: "Test reason.",
+              }),
+            },
+          ],
+          usage: { input_tokens: 10, output_tokens: 20 },
+        });
+      }),
+    );
+
+    const client = new BriefingClient({
+      apiKey: "test-key",
+      modelId: "claude-test",
+      baseUrl: ANTHROPIC_BASE_URL,
+    });
+
+    try {
+      await client.generateBriefing(mockPayload, mockMeasurements);
+      expect.fail("Should have thrown");
+    } catch (error) {
+      expect(error).toBeInstanceOf(BriefingError);
+      if (error instanceof BriefingError) {
+        expect(error.code).toBe("ai-invalid-output");
+      }
+    }
+
+    // Initial call + 1 retry = 2 calls
+    expect(callCount).toBe(2);
+  });
+
+  it("rejects an inapplicable Measurement choice and retries once", async () => {
+    // Create measurements where biggestInCategory has no magnitude
+    const measurementsNoMagnitude: MeasurementSummary = {
+      ...mockMeasurements,
+      biggestInCategory: {
+        id: "biggestInCategory",
+        title: "Biggest in a Category",
+        data: {
+          categoryId: "wildfires",
+          categoryTitle: "Wildfires",
+          eventId: null,
+          eventTitle: null,
+          magnitudeValue: null,
+          magnitudeUnit: null,
+        },
+      },
+    };
+
+    let callCount = 0;
+    server.use(
+      http.post(`${ANTHROPIC_BASE_URL}/v1/messages`, () => {
+        callCount++;
+        return HttpResponse.json({
+          id: "msg_test",
+          type: "message",
+          role: "assistant",
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                summary: "Wildfires dominated. Storms followed.",
+                chosenMeasurementId: "biggestInCategory",
+                caption: "Biggest wildfire",
+                reason: "It shows the largest event.",
+              }),
+            },
+          ],
+          usage: { input_tokens: 10, output_tokens: 20 },
+        });
+      }),
+    );
+
+    const client = new BriefingClient({
+      apiKey: "test-key",
+      modelId: "claude-test",
+      baseUrl: ANTHROPIC_BASE_URL,
+    });
+
+    try {
+      await client.generateBriefing(mockPayload, measurementsNoMagnitude);
+      expect.fail("Should have thrown");
+    } catch (error) {
+      expect(error).toBeInstanceOf(BriefingError);
+      if (error instanceof BriefingError) {
+        expect(error.code).toBe("ai-invalid-output");
+        expect(error.message).toContain("not applicable");
+      }
+    }
+
+    // Initial call + 1 retry = 2 calls
+    expect(callCount).toBe(2);
   });
 
   it("rejects malformed output and retries once", async () => {
@@ -110,7 +317,7 @@ describe("BriefingClient", () => {
     });
 
     try {
-      await client.generateBriefing(mockPayload);
+      await client.generateBriefing(mockPayload, mockMeasurements);
       expect.fail("Should have thrown");
     } catch (error) {
       expect(error).toBeInstanceOf(BriefingError);
@@ -136,7 +343,12 @@ describe("BriefingClient", () => {
           content: [
             {
               type: "text",
-              text: '{"summary":"I cannot help with that request."}',
+              text: JSON.stringify({
+                summary: "I cannot help with that request.",
+                chosenMeasurementId: "eventsByCategory",
+                caption: "Test",
+                reason: "Test",
+              }),
             },
           ],
           usage: { input_tokens: 10, output_tokens: 15 },
@@ -151,7 +363,7 @@ describe("BriefingClient", () => {
     });
 
     try {
-      await client.generateBriefing(mockPayload);
+      await client.generateBriefing(mockPayload, mockMeasurements);
       expect.fail("Should have thrown");
     } catch (error) {
       expect(error).toBeInstanceOf(BriefingError);
@@ -181,7 +393,7 @@ describe("BriefingClient", () => {
     });
 
     try {
-      await client.generateBriefing(mockPayload);
+      await client.generateBriefing(mockPayload, mockMeasurements);
       expect.fail("Should have thrown");
     } catch (error) {
       expect(error).toBeInstanceOf(BriefingError);
@@ -212,7 +424,7 @@ describe("BriefingClient", () => {
     });
 
     try {
-      await client.generateBriefing(mockPayload);
+      await client.generateBriefing(mockPayload, mockMeasurements);
       expect.fail("Should have thrown");
     } catch (error) {
       expect(error).toBeInstanceOf(BriefingError);
@@ -222,42 +434,6 @@ describe("BriefingClient", () => {
     }
     // One retry = 2 total calls
     expect(callCount).toBe(2);
-  });
-
-  it("caches results by input hash", async () => {
-    let callCount = 0;
-    server.use(
-      http.post(`${ANTHROPIC_BASE_URL}/v1/messages`, () => {
-        callCount++;
-        return HttpResponse.json({
-          id: "msg_test",
-          type: "message",
-          role: "assistant",
-          content: [
-            {
-              type: "text",
-              text: '{"summary":"Wildfires dominated the count. Storms followed."}',
-            },
-          ],
-          usage: { input_tokens: 100, output_tokens: 20 },
-        });
-      }),
-    );
-
-    const client = new BriefingClient({
-      apiKey: "test-key",
-      modelId: "claude-test",
-      baseUrl: ANTHROPIC_BASE_URL,
-    });
-
-    // First call
-    const result1 = await client.generateBriefing(mockPayload);
-    expect(callCount).toBe(1);
-
-    // Second call with same input should hit cache
-    const result2 = await client.generateBriefing(mockPayload);
-    expect(callCount).toBe(1); // No additional call
-    expect(result2.summary).toBe(result1.summary);
   });
 
   it("logs token usage without secrets", async () => {
@@ -272,7 +448,12 @@ describe("BriefingClient", () => {
           content: [
             {
               type: "text",
-              text: '{"summary":"Wildfires led the count. Storms followed."}',
+              text: JSON.stringify({
+                summary: "Wildfires led the count. Storms followed.",
+                chosenMeasurementId: "eventsByCategory",
+                caption: "Events by Category",
+                reason: "Wildfires are the most common.",
+              }),
             },
           ],
           usage: { input_tokens: 150, output_tokens: 25 },
@@ -286,7 +467,7 @@ describe("BriefingClient", () => {
       baseUrl: ANTHROPIC_BASE_URL,
     });
 
-    await client.generateBriefing(mockPayload);
+    await client.generateBriefing(mockPayload, mockMeasurements);
 
     // Check that token usage was logged
     const logCalls = consoleSpy.mock.calls.map((call) => call.join(" "));
