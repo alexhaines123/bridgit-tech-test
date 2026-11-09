@@ -4,6 +4,10 @@
 
 Use the `gh` CLI for issue and spec tracking. Follow `docs/agents/issue-tracker.md` for repo-specific commands and conventions.
 
+**Investigation issues** (phrased as questions: "is X too large?", "should we do Y?") should be grilled into sharp specs before implementation. The grilling produces a concrete goal and acceptance criteria.
+
+**Implementation issues** (phrased as tasks: "add feature X", "fix bug Y") are already agent-ready and can go straight to `/implement`.
+
 ## Domain docs
 
 This is a single-context repo: domain docs live in root `GLOSSARY.md` and `docs/adr/`. Follow `docs/agents/domain.md` when exploring domain terms or recording decisions; create these docs lazily.
@@ -11,6 +15,21 @@ This is a single-context repo: domain docs live in root `GLOSSARY.md` and `docs/
 ## Pull requests
 
 Structure PRs with multiple logical commits following the code flow (data → API → UI), not one large commit. Read `docs/agents/pr-conventions.md` for commit ordering, PR description language rules (ASD-STE100 + ubiquitous language from `GLOSSARY.md`), and examples.
+
+## Code review
+
+Read `CODING_STANDARDS.md` during review. These are the mechanical rules the reviewer enforces.
+
+## Merge conflicts
+
+After resolving merge conflicts, run lint and tests before committing:
+
+```bash
+npm run lint
+npm test
+```
+
+This catches issues like missing imports or type errors before they're committed.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

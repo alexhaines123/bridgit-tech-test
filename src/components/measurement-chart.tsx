@@ -2,6 +2,7 @@
 
 import { useTheme } from "@mui/material/styles";
 import {
+  Box,
   Card,
   CardContent,
   Typography,
@@ -11,7 +12,6 @@ import {
   TableCell,
   TableHead,
   TableRow,
-  Box,
 } from "@mui/material";
 import {
   BarChart,
