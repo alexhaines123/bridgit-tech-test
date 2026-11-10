@@ -245,3 +245,33 @@ export function computeAllMeasurements(
     },
   };
 }
+
+/**
+ * Determines the default Measurement to show, deterministically.
+ * Picks the first non-empty measurement from a priority list:
+ * 1. eventsByCategory (if there are events with categories)
+ * 2. eventsByRegion (if there are events with regions)
+ * 3. startedPerDay (if there are events with dates)
+ * 4. newVsOngoing (always has data, even if zeros)
+ * 5. biggestInCategory (fallback)
+ */
+export function determineDefaultMeasurement(
+  measurements: MeasurementSummary,
+): MeasurementId {
+  if (measurements.eventsByCategory.data.length > 0) {
+    return "eventsByCategory";
+  }
+  if (measurements.eventsByRegion.data.length > 0) {
+    return "eventsByRegion";
+  }
+  if (measurements.startedPerDay.data.length > 0) {
+    return "startedPerDay";
+  }
+  if (
+    measurements.newVsOngoing.data.newCount > 0 ||
+    measurements.newVsOngoing.data.ongoingCount > 0
+  ) {
+    return "newVsOngoing";
+  }
+  return "biggestInCategory";
+}

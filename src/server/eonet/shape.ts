@@ -1,6 +1,7 @@
 import type { EonetEvent, EonetResponse } from "./schema";
 import type { ShapedEvent, ShapingResult } from "./types";
 import { deriveRegion } from "@/server/regions/lookup";
+import { computeAllMeasurements, determineDefaultMeasurement } from "@/server/measurements";
 
 /**
  * Maximum number of geometry entries to keep per event.
@@ -108,6 +109,8 @@ export function filterByWindow(
  * Shapes and filters a raw EONET response into the domain model.
  *
  * Records the before/after payload sizes so callers can log the trimming benefit.
+ * Also computes all five Measurements from the shaped events and determines
+ * the default Measurement to show, so they can be cached together.
  */
 export function shapeResponse(raw: EonetResponse, windowDays: number): ShapingResult {
   const rawSizeBytes = estimateSize(raw);
@@ -122,8 +125,14 @@ export function shapeResponse(raw: EonetResponse, windowDays: number): ShapingRe
 
   const shapedSizeBytes = estimateSize(filtered);
 
+  // Compute Measurements from the filtered events
+  const measurements = computeAllMeasurements(filtered);
+  const defaultMeasurementId = determineDefaultMeasurement(measurements);
+
   return {
     events: filtered,
+    measurements,
+    defaultMeasurementId,
     rawSizeBytes,
     shapedSizeBytes,
     totalEventsBeforeFilter,

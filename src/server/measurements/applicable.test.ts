@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { isMeasurementApplicable } from "./applicable";
-import type { MeasurementSummary } from "./types";
 import { createFullMeasurementSummary } from "../../../test/fixtures/measurements";
+import { isMeasurementApplicable } from "./applicable";
 
 describe("isMeasurementApplicable", () => {
   describe("with full data", () => {

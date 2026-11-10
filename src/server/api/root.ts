@@ -8,7 +8,6 @@ import type { WindowDays } from "@/server/eonet/types";
 import { RedisEventsCache } from "@/server/cache/redis-cache";
 import { CacheUnavailableError } from "@/server/cache/errors";
 import { REGIONS } from "@/server/regions/lookup";
-import { computeAllMeasurements } from "@/server/measurements";
 import { MEASUREMENT_IDS, type MeasurementId } from "@/server/measurements/types";
 import { measurementsSchema } from "@/server/measurements/schema";
 import { briefingClient } from "@/server/briefing";
@@ -119,17 +118,8 @@ export const appRouter = router({
           return result;
         });
 
-        // Compute all Measurements from the shaped events
-        const measurements = computeAllMeasurements(cached.data.events);
-
-        // Determine the default Measurement deterministically:
-        // Pick the first non-empty measurement from a priority list.
-        const defaultMeasurementId = determineDefaultMeasurement(measurements);
-
         return {
           ...cached.data,
-          measurements,
-          defaultMeasurementId,
           stale: cached.stale,
           staleAgeMs: cached.staleAgeMs,
           cachedAt: cached.cachedAt,
@@ -178,14 +168,14 @@ export const appRouter = router({
     )
     .query(async ({ input }) => {
       try {
-        // Fetch the events and compute Measurements (same as the events procedure)
+        // Fetch the events and Measurements (cached together to avoid recomputation)
         const cached = await eventsCache.getOrFetch(input.windowDays, async () => {
           const raw = await eonetClient.fetchEvents(input.windowDays);
           return shapeResponse(raw, input.windowDays);
         });
 
-        const measurements = computeAllMeasurements(cached.data.events);
-        const defaultMeasurementId = determineDefaultMeasurement(measurements);
+        const measurements = cached.data.measurements;
+        const defaultMeasurementId = cached.data.defaultMeasurementId;
 
         // Build the payload and call the AI
         const payload = buildBriefingPayload({
@@ -224,35 +214,5 @@ export const appRouter = router({
       }
     }),
 });
-
-/**
- * Determines the default Measurement to show, deterministically.
- * Picks the first non-empty measurement from a priority list:
- * 1. eventsByCategory (if there are events with categories)
- * 2. eventsByRegion (if there are events with regions)
- * 3. startedPerDay (if there are events with dates)
- * 4. newVsOngoing (always has data, even if zeros)
- * 5. biggestInCategory (fallback)
- */
-function determineDefaultMeasurement(
-  measurements: ReturnType<typeof computeAllMeasurements>,
-): MeasurementId {
-  if (measurements.eventsByCategory.data.length > 0) {
-    return "eventsByCategory";
-  }
-  if (measurements.eventsByRegion.data.length > 0) {
-    return "eventsByRegion";
-  }
-  if (measurements.startedPerDay.data.length > 0) {
-    return "startedPerDay";
-  }
-  if (
-    measurements.newVsOngoing.data.newCount > 0 ||
-    measurements.newVsOngoing.data.ongoingCount > 0
-  ) {
-    return "newVsOngoing";
-  }
-  return "biggestInCategory";
-}
 
 export type AppRouter = typeof appRouter;

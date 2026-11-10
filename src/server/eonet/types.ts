@@ -4,6 +4,7 @@
  */
 
 import type { Region } from "@/server/regions/lookup";
+import type { MeasurementId, MeasurementSummary } from "@/server/measurements/types";
 
 /**
  * The span of recent days whose Events the dashboard shows.
@@ -61,10 +62,15 @@ export interface ShapedEvent {
 
 /**
  * The result of shaping a raw EONET response.
- * Includes the shaped events plus metadata about the shaping process.
+ * Includes the shaped events plus metadata about the shaping process
+ * and pre-computed Measurements (cached to avoid recomputation on every request).
  */
 export interface ShapingResult {
   events: ShapedEvent[];
+  /** All five Measurements computed from the events on the server. */
+  measurements: MeasurementSummary;
+  /** The deterministic default Measurement to show until the AI picks one. */
+  defaultMeasurementId: MeasurementId;
   /** Total raw payload size in bytes before shaping. */
   rawSizeBytes: number;
   /** Total shaped payload size in bytes after shaping. */

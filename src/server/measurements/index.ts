@@ -5,6 +5,7 @@ export {
   computeNewVsOngoing,
   computeStartedPerDay,
   computeAllMeasurements,
+  determineDefaultMeasurement,
 } from "./compute";
 
 export { isMeasurementApplicable } from "./applicable";

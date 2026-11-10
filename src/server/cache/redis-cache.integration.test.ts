@@ -24,6 +24,7 @@ import {
   staleKey,
 } from "./types";
 import type { ShapingResult } from "@/server/eonet/types";
+import { computeAllMeasurements, determineDefaultMeasurement } from "@/server/measurements";
 
 const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
 const COMPOSE_DIR = process.cwd();
@@ -75,27 +76,33 @@ async function ensureRedisRunning(): Promise<void> {
  * A minimal ShapingResult fixture for testing.
  */
 function makeShapingResult(id: string = "EONET_TEST"): ShapingResult {
-  return {
-    events: [
-      {
-        id,
-        title: "Test Event",
-        description: null,
-        link: "https://example.com",
-        categoryId: "wildfires",
-        categoryTitle: "Wildfires",
-        closed: false,
-        latest: {
-          coordinates: [0, 0],
-          date: new Date().toISOString(),
-          magnitude: null,
-        },
-        historyLength: 1,
-        historyTrimmed: false,
-        region: "Africa",
-        earliestDate: new Date().toISOString(),
+  const events = [
+    {
+      id,
+      title: "Test Event",
+      description: null,
+      link: "https://example.com",
+      categoryId: "wildfires",
+      categoryTitle: "Wildfires",
+      closed: false,
+      latest: {
+        coordinates: [0, 0] as [number, number],
+        date: new Date().toISOString(),
+        magnitude: null,
       },
-    ],
+      historyLength: 1,
+      historyTrimmed: false,
+      region: "Africa" as const,
+      earliestDate: new Date().toISOString(),
+    },
+  ];
+  const measurements = computeAllMeasurements(events);
+  const defaultMeasurementId = determineDefaultMeasurement(measurements);
+
+  return {
+    events,
+    measurements,
+    defaultMeasurementId,
     rawSizeBytes: 100,
     shapedSizeBytes: 80,
     totalEventsBeforeFilter: 1,
