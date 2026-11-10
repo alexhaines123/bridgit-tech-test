@@ -209,7 +209,7 @@ npm run test:watch  # watch mode
 
 ### Rate limits
 
-- **EONET**: NASA publishes no formal limit; the community-observed ceiling is ~30 req/min. The app stays well under this via the Redis cache (60s fresh TTL, 24h stale TTL) and bounded retry (2 attempts, 1s delay). A 429 is honoured with its retry hint.
+- **EONET**: NASA publishes no formal limit; the community-observed ceiling is ~30 req/min. The app stays well under this via the Redis cache (2h fresh TTL, 24h stale TTL) and bounded retry (2 attempts, 1s delay). A 429 is honoured with its retry hint.
 - **Claude (Anthropic)**: per-model TPM/RPM limits apply. The Briefing cache-by-input-hash means the same data never costs a second AI call. Invalid output is retried with a bounded attempt count.
 
 ### Cost

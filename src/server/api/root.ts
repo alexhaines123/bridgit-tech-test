@@ -88,7 +88,7 @@ export const appRouter = router({
   /**
    * Fetches live events from NASA's EONET API, shaped and filtered by the
    * specified Window (7, 30, or 90 days). Results are cached in Redis:
-   * - Fresh cache: 60s TTL
+   * - Fresh cache: 2h TTL
    * - Stale cache: 24h TTL, served when EONET is down (with age banner)
    * - Redis unreachable: clear error (bounded timeout), per ADR 0004
    *
